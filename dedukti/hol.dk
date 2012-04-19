@@ -1,0 +1,59 @@
+;-------;
+; Types ;
+;-------;
+
+type : Type.
+
+bool : type.
+arr  : type -> type -> type.
+
+;-------;
+; Terms ;
+;-------;
+
+term : type -> Type.
+[a : type, b : type] term (arr a b) --> term a -> term b.
+
+eq : a : type -> term (arr a (arr a bool)).
+select : a : type -> term (arr (arr a bool) a).
+
+;--------------------------;
+; Propositions translation ;
+;--------------------------;
+
+eps : term bool -> Type.
+[a : type, x : term a, y : term a] eps (eq a x y) -->
+  c : term (arr a bool) -> eps (c x) -> eps (c y).
+
+;--------;
+; Axioms ;
+;--------;
+
+FUN_EXT : a : type -> b : type -> p : term (arr a b) -> q : term (arr a b) ->
+  (x : term a -> eps (eq b (p x) (q x))) -> eps (eq (arr a b) p q).
+
+PROP_EXT : p : term bool -> q : term bool ->
+  (eps q -> eps p) -> (eps p -> eps q) -> eps (eq bool p q).
+
+;-----------------;
+; Derivable rules ;
+;-----------------;
+
+REFL : a : type -> t : term a ->
+  eps (eq a t t).
+[a : type, t : term a]
+  REFL a t -->
+  c : term (arr a bool) => H : eps (c t) => H.
+
+EQ_MP : p : term bool -> q : term bool ->
+  eps (eq bool p q) -> eps p -> eps q.
+[p : term bool, q : term bool, Hpq: eps (eq bool p q), Hp : eps p]
+  EQ_MP p q Hpq Hp -->
+  Hpq (p : term bool => p) Hp.
+
+APP_THM : a : type -> b : type -> s : term (arr a b) -> t : term (arr a b) -> u : term a -> v : term a ->
+  eps (eq (arr a b) s t) -> eps (eq a u v) -> eps (eq b (s u) (t v)).
+[a : type, b : type, s : term (arr a b), t : term (arr a b), u : term a, v : term a, Hst : eps (eq (arr a b) s t), Huv : eps (eq a u v)]
+  APP_THM a b s t u v Hst Huv -->
+  c : term (arr b bool) => H : eps (c (s u)) => Hst (s : term (arr a b) => c (s v)) (Huv (u : term a => c (s u)) H).
+
