@@ -148,7 +148,7 @@ let fprintf_pterm ppf t =
     | PApp(t1, t2) -> fprintf ppf "@[<2>%a@ %a@]" print_left_app t1 print_right_app t2
     | PHyp(p) ->
         fprintf str_formatter "%a" print_pterm (export_term p); (* There cannot be a free hypothesis in (export_term p), so this won't loop. *)
-        failwith (sprintf "free hypotheses remaining: %s" (flush_str_formatter ()))
+        failwith (sprintf "free hypothesis remaining: %s" (flush_str_formatter ()))
   and print_left_arr ppf t =
     match t with
     | PArr(_) -> fprintf ppf "@[(%a)@]" print_pterm t

@@ -21,14 +21,6 @@ let rec context_union gamma delta =
 let rec context_remove gamma p =
   List.filter (fun q -> not (alpha_equiv p q)) gamma
 
-(* Instantiates the free variables that appear in q but not in gamma to
-   eliminate them. In rules like eqMp, some free variables can appear in the
-   premises but not in the conclusion, so wee need to eliminate them. *)
-
-(*let instantiate_type a =*)
-
-(*let elim_free_vars t gamma p =*)
-
 (* Deduction rules *)
 
 let absThm x thmtu =
@@ -84,16 +76,6 @@ let deductAntiSym thmp thmq =
   Thm(context_union gamma' delta', eq p q,
     PApp(PApp(PApp(PApp(PVar("PROP_EXT"), p'), q'), hp'), hq'))
 
-let eqMp thmpq thmr =
-  let Thm(gamma, pq, hpq) = thmpq in
-  let Thm(delta, r, hp) = thmr in
-  let p, q = try get_eq pq with Failure s -> failwith ("eqMp: " ^ s) in
-  if not (alpha_equiv p r) then failwith "eqMp: terms do not agree" else
-  let p' = export_term p in
-  let q' = export_term q in
-  Thm(context_union gamma delta, q,
-    PApp(PApp(PApp(PApp(PVar("hol.EQ_MP"), p'), q'), hpq), hp))
-
 let refl t =
   let a' = export_raw_type (type_of t) in
   let t' = export_term t in
@@ -106,6 +88,32 @@ let instThm theta sigma thmp =
   let s t = subst sigma (type_subst theta t) in
   Thm(List.map s gamma, s p,
     export_subst sigma (export_type_subst theta hp))
+
+(* Instantiates the free variables that are in fv but are not in vars to
+   eliminate them. In the rule eqMp, some free variables can appear in the
+   premises but not in the conclusion, so wee need to eliminate them. *)
+let elim_free_vars fv vars t =
+  let inst_var t x =
+    let _, a = x in
+    PApp(abstract_var t x, PApp(PVar("hol.witness"), export_raw_type a)) in
+  List.fold_left inst_var t fv
+
+let eqMp thmpq thmr =
+  let Thm(gamma, pq, hpq) = thmpq in
+  let Thm(delta, r, hp) = thmr in
+  let p, q = try get_eq pq with Failure s -> failwith ("eqMp: " ^ s) in
+  if not (alpha_equiv p r) then failwith "eqMp: terms do not agree" else
+  let p' = export_term p in
+  let q' = export_term q in
+  let gamma_delta = context_union gamma delta in
+  (* Eliminate free variables that appear in p but not in gamma, delta or q. *)
+  let vars, _ = all_free_vars gamma_delta q in
+  let fv = List.filter (fun x -> not (List.mem x vars)) (free_vars p []) in 
+  let p' = elim_free_vars fv vars p' in
+  let hp = elim_free_vars fv vars hp in
+  let hpq = elim_free_vars fv vars hpq in
+  Thm(context_union gamma delta, q,
+    PApp(PApp(PApp(PApp(PVar("hol.EQ_MP"), p'), q'), hpq), hp))
 
 let defineConst c t =
   let ty_vars, a = define_new_constant c t in
