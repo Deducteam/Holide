@@ -15,11 +15,11 @@ arr  : type -> type -> type.
 term : type -> Type.
 [a : type, b : type] term (arr a b) --> term a -> term b.
 
-eq : a : type -> term (arr a (arr a bool)).
-
 imp : term (arr bool (arr bool bool)).
 
 forall : a : type -> term (arr (arr a bool) bool).
+
+eq : a : type -> term (arr a (arr a bool)).
 
 select : a : type -> term (arr (arr a bool) a).
 
@@ -27,18 +27,17 @@ witness : a : type -> term a.
 [] witness bool --> eq (arr bool bool) (p : term bool => p) (p : term bool => p).
 [a : type, b : type] witness (arr a b) --> x : term a => witness b.
 
+htrue : term bool.
+[] htrue --> eq (arr bool bool) (p : term bool => p) (p : term bool => p).
 
-T : term bool.
-[] T --> eq (arr bool bool) (p : term bool => p) (p : term bool => p).
-
-and : term (arr bool (arr bool bool)).
-[p : term bool, q : term bool] and p q --> eq (arr (arr bool (arr bool bool)) bool) (f : term (arr bool (arr bool bool)) => f p q) (f : term (arr bool (arr bool bool)) => f T T).
+hand : term (arr bool (arr bool bool)).
+[] hand --> p : term bool => q : term bool => eq (arr (arr bool (arr bool bool)) bool) (f : term (arr bool (arr bool bool)) => f p q) (f : term (arr bool (arr bool bool)) => f htrue htrue).
 
 himp : term (arr bool (arr bool bool)).
-[p : term bool, q : term bool] himp p q --> eq bool (and p q) p.
+[] himp --> p : term bool => q : term bool => eq bool (hand p q) p.
 
 hforall : a : type -> term (arr (arr a bool) bool).
-[a : type, P : term (arr a bool)] hforall a P --> eq (arr a bool) P (x : term a => T).
+[a : type] hforall a --> P : term (arr a bool) => eq (arr a bool) P (x : term a => htrue).
 
 ;--------------------------;
 ; Propositions translation ;
@@ -95,32 +94,32 @@ EQ_MP2 : p : term bool -> q : term bool -> eps (eq bool p q) -> eps q -> eps p.
 [p : term bool, q : term bool, Hpq : eps (eq bool p q), Hq : eps q] EQ_MP2 p q Hpq Hq -->
   EQ_MP q p (EQ_SYM bool p q Hpq) Hq.
 
-T_INTRO : eps T.
-[] T_INTRO -->
+TRUE_INTRO : eps htrue.
+[] TRUE_INTRO -->
   c : term (arr (arr bool bool) bool) => H : eps (c (p : term bool => p)) => H.
 
-EQ_T : p : term bool -> eps p -> eps (eq bool p T).
-[] EQ_T --> p : term bool => Hp : eps p => PROP_EXT p T (HT : eps T => Hp) (Hp : eps p => T_INTRO).
+EQ_TRUE : p : term bool -> eps p -> eps (eq bool p htrue).
+[] EQ_TRUE --> p : term bool => Hp : eps p => PROP_EXT p htrue (HT : eps htrue => Hp) (Hp : eps p => TRUE_INTRO).
 
-AND_INTRO : p : term bool -> q : term bool -> eps p -> eps q -> eps (and p q).
+AND_INTRO : p : term bool -> q : term bool -> eps p -> eps q -> eps (hand p q).
 [p : term bool, q : term bool, Hp : eps p, Hq : eps q] AND_INTRO p q Hp Hq -->
-  FUN_EXT (arr bool (arr bool bool)) bool (f : term (arr bool (arr bool bool)) => f p q) (f : term (arr bool (arr bool bool)) => f T T) (f : term (arr bool (arr bool bool)) => APP_THM bool bool (f p) (f T) q T (APP_THM1 bool (arr bool bool) f p T (EQ_T p Hp)) (EQ_T q Hq)).
+  FUN_EXT (arr bool (arr bool bool)) bool (f : term (arr bool (arr bool bool)) => f p q) (f : term (arr bool (arr bool bool)) => f htrue htrue) (f : term (arr bool (arr bool bool)) => APP_THM bool bool (f p) (f htrue) q htrue (APP_THM1 bool (arr bool bool) f p htrue (EQ_TRUE p Hp)) (EQ_TRUE q Hq)).
 
-AND_ELIM1 : p : term bool -> q : term bool -> eps (and p q) -> eps p.
-[p : term bool, q : term bool, Hpq : eps (and p q)] AND_ELIM1 p q Hpq -->
-  EQ_MP2 p T (APP_THM2 (arr bool (arr bool bool)) bool (f : term (arr bool (arr bool bool)) => f p q) (f : term (arr bool (arr bool bool)) => f T T) (p : term bool => q : term bool => p) Hpq) T_INTRO.
+AND_ELIM1 : p : term bool -> q : term bool -> eps (hand p q) -> eps p.
+[p : term bool, q : term bool, Hpq : eps (hand p q)] AND_ELIM1 p q Hpq -->
+  EQ_MP2 p htrue (APP_THM2 (arr bool (arr bool bool)) bool (f : term (arr bool (arr bool bool)) => f p q) (f : term (arr bool (arr bool bool)) => f htrue htrue) (p : term bool => q : term bool => p) Hpq) TRUE_INTRO.
 
-AND_ELIM2 : p : term bool -> q : term bool -> eps (and p q) -> eps q.
-[p : term bool, q : term bool, Hpq : eps (and p q)] AND_ELIM2 p q Hpq -->
-  EQ_MP2 q T (APP_THM2 (arr bool (arr bool bool)) bool (f : term (arr bool (arr bool bool)) => f p q) (f : term (arr bool (arr bool bool)) => f T T) (p : term bool => q : term bool => q) Hpq) T_INTRO.
+AND_ELIM2 : p : term bool -> q : term bool -> eps (hand p q) -> eps q.
+[p : term bool, q : term bool, Hpq : eps (hand p q)] AND_ELIM2 p q Hpq -->
+  EQ_MP2 q htrue (APP_THM2 (arr bool (arr bool bool)) bool (f : term (arr bool (arr bool bool)) => f p q) (f : term (arr bool (arr bool bool)) => f htrue htrue) (p : term bool => q : term bool => q) Hpq) TRUE_INTRO.
 
 IMP_INTRO : p : term bool -> q : term bool -> (eps p -> eps q) -> eps (himp p q).
 [p : term bool, q : term bool, Hpq : (eps p -> eps q)] IMP_INTRO p q Hpq -->
-  PROP_EXT (and p q) p (Hp : eps p => AND_INTRO p q Hp (Hpq Hp)) (Hpq : eps (and p q) => AND_ELIM1 p q Hpq).
+  PROP_EXT (hand p q) p (Hp : eps p => AND_INTRO p q Hp (Hpq Hp)) (Hpq : eps (hand p q) => AND_ELIM1 p q Hpq).
 
 IMP_ELIM : p : term bool -> q : term bool -> eps (himp p q) -> eps p -> eps q.
 [p : term bool, q : term bool, Hpq : eps (himp p q), Hp : eps p] IMP_ELIM p q Hpq Hp -->
-  AND_ELIM2 p q (EQ_MP2 (and p q) p Hpq Hp).
+  AND_ELIM2 p q (EQ_MP2 (hand p q) p Hpq Hp).
 
 EQUIV_IMP_HIMP : eps (eq (arr bool (arr bool bool)) imp himp).
 [] EQUIV_IMP_HIMP -->
@@ -128,12 +127,13 @@ EQUIV_IMP_HIMP : eps (eq (arr bool (arr bool bool)) imp himp).
 
 FORALL_INTRO : a : type -> P : term (arr a bool) -> (x : term a -> eps (P x)) -> eps (hforall a P).
 [a : type, P : term (arr a bool), HPx : (x : term a -> eps (P x))] FORALL_INTRO a P HPx -->
-  FUN_EXT a bool P (x : term a => T) (x : term a => EQ_T (P x) (HPx x)).
+  FUN_EXT a bool P (x : term a => htrue) (x : term a => EQ_TRUE (P x) (HPx x)).
 
 FORALL_ELIM : a : type -> P : term (arr a bool) -> eps (hforall a P) -> x : term a -> eps (P x).
 [a : type, P : term (arr a bool), HPx : eps (hforall a P), x : term a] FORALL_ELIM a P HPx x -->
-  EQ_MP2 (P x) T (APP_THM a bool P (x : term a => T) x x HPx (REFL a x)) T_INTRO.
+  EQ_MP2 (P x) htrue (APP_THM a bool P (x : term a => htrue) x x HPx (REFL a x)) TRUE_INTRO.
 
 EQUIV_FORALL_HFORALL : a : type -> eps (eq (arr (arr a bool) bool) (forall a) (hforall a)).
 [a : type] EQUIV_FORALL_HFORALL a -->
   FUN_EXT (arr a bool) bool (forall a) (hforall a) (P : term (arr a bool) => PROP_EXT (forall a P) (hforall a P) (FORALL_ELIM a P) (FORALL_INTRO a P)).
+
