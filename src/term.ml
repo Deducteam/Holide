@@ -133,7 +133,9 @@ let define_new_constant c t =
 (* Match the type scheme of the constant c with the type a, generating a
    type substitution for the type variables. *)
 let match_constant_type c a =
-  let (ty_vars, b) = List.assoc c !cst_type_schemes in
+  let (ty_vars, b) =
+    try List.assoc c !cst_type_schemes
+    with Not_found -> failwith "constant not declared" in
   let rec match_type a b theta =
     match a, b with
     | a, TyVar(x) ->

@@ -55,7 +55,7 @@ let print_stack stack =
   let rec print_stack stack =
     match stack with
     | [] -> ()
-    | head :: tail -> print_object head; print_newline (); print_stack tail
+    | head :: tail -> print_object head; eprintf "\n"; print_stack tail
   and print_object obj =
     match obj with
     | OName(n) -> eprintf "OName(\"%s\")" n
@@ -70,10 +70,10 @@ let print_stack stack =
   and print_object_list objs = 
     match objs with
     | [] -> ()
-    | head :: tail -> print_object head; printf "; " in
-  eprintf "Stack:";
-  print_stack stack;
-  eprintf "\n"
+    | [head] -> print_object head
+    | head :: tail -> print_object head; eprintf "; "; print_object_list tail in
+  eprintf "Stack:\n";
+  print_stack stack
 
 let is_digit c =
   match c with
@@ -169,9 +169,10 @@ let read_article filename =
       let state =
         try process_command stack cmd
         with
-        | Failure s ->
+        | e ->
             print_stack stack;
-            failwith (Printf.sprintf "in article %s at line %d: %s: %s" filename line_number cmd s) in 
+            eprintf "In article %s, at line %d: %s\n" filename line_number cmd;
+            raise e in
       loop (line_number + 1) state
     with End_of_file -> () in
   loop 1 [];
