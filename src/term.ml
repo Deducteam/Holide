@@ -15,7 +15,9 @@ type term =
 let cst_type_schemes =
   ref [
     "=", (["A"], ty_arr (TyVar("A")) (ty_arr (TyVar("A")) ty_bool));
-    "select", (["A"], ty_arr (ty_arr (TyVar("A")) ty_bool) (TyVar("A")))]
+    "select", (["A"], ty_arr (ty_arr (TyVar("A")) ty_bool) (TyVar("A")));
+    "==>", ([], ty_arr ty_bool (ty_arr ty_bool ty_bool));
+    "!", (["A"], ty_arr (ty_arr (TyVar("A")) ty_bool) ty_bool)]
 
 (* Return the type of the constant c with type parameters ty_args. *)
 let type_of_cst c ty_args =

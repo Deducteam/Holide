@@ -11,6 +11,7 @@ type pterm =
   | PArr of pterm * pterm
   | PApp of pterm * pterm
   | PHyp of Term.term (* Placeholder for a hypothesis variable *)
+  | PHLam of Term.term * pterm (* Abstraction for hypothesis variables *)
 
 (* Translate HOL types into pterms. *)
 
@@ -51,16 +52,7 @@ let abstract_var t x =
   PLam(Name.export_var x, export_type a, t)
 
 let abstract_hyp t p =
-  let idh = Name.fresh_hyp () in
-  let rec abstract_hyp t =
-    match t with
-    | PVar(_) -> t
-    | PLam(x, a, t1) -> PLam(x, a, abstract_hyp t1)
-    | PPi (_) -> t
-    | PArr(_) -> t
-    | PApp(t1, t2) -> PApp(abstract_hyp t1, abstract_hyp t2)
-    | PHyp(q) -> if alpha_equiv p q then PVar(idh) else t in
-  PLam(idh, export_prop p, abstract_hyp t)
+  PHLam(p, t)
 
 let gen_tvar t a =
   PPi(Name.export_tyvar a, PVar("type"), t)
@@ -112,54 +104,54 @@ let open_abstract gamma p t =
 
 (* Translate substitutions *)
 
-(* Applies the function s to the hypothesis variables in t. We need this
-   because substitutions also modify hypotheses. Free variables in hypotheses
-   cannot be bound by a lambda, so this is safe. *)
-let rec subst_in_hyp s t =
-  match t with
-  | PVar(_) -> t
-  | PLam(x, a, u) -> PLam(x, a, subst_in_hyp s u)
-  | PPi (_) -> t
-  | PArr(_) -> t
-  | PApp(t1, t2) -> PApp(subst_in_hyp s t1, subst_in_hyp s t2)
-  | PHyp(p) -> PHyp(s p)
-
-let export_subst sigma t =
-  let t = subst_in_hyp (subst sigma) t in
-  let vars, terms = List.split sigma in
-  let apply_term t u = PApp(t, export_term u) in
-  List.fold_left apply_term (List.fold_left abstract_var t vars) (List.rev terms)
-
-let export_type_subst theta t =
-  let t = subst_in_hyp (type_subst theta) t in
-  let tvars, types = List.split theta in
-  let apply_type t a = PApp(t, export_raw_type a) in
-  List.fold_left apply_type (List.fold_left abstract_tvar t tvars) (List.rev types)
+let export_subst theta sigma gamma p t =
+  let s t = subst sigma (type_subst theta t) in
+  let fv, ftv = all_free_vars gamma p in
+  let t = close_abstract gamma p t in
+  let t = List.fold_left (fun t a -> PApp(t, export_raw_type (type_inst theta (TyVar(a))))) t (List.rev ftv) in
+  let t = List.fold_left (fun t x -> PApp(t, export_term (s (Var(x))))) t (List.rev fv) in
+  let t = List.fold_left apply_hyp t (List.rev (List.map s gamma)) in
+  t
 
 (* Pretty printing *)
+
+(* Convert hypothesis variables to lambda abstractions. *)
+let convert_hyp t p =
+  let idh = Name.fresh_hyp () in
+  let rec convert_hyp t =
+    match t with
+    | PVar(_) -> t
+    | PLam(x, a, t1) -> PLam(x, a, convert_hyp t1)
+    | PPi (_) -> t
+    | PArr(_) -> t
+    | PApp(t1, t2) -> PApp(convert_hyp t1, convert_hyp t2)
+    | PHyp(q) -> if alpha_equiv p q then PVar(idh) else t
+    | PHLam(q, t1) -> if alpha_equiv p q then t else PHLam(q, convert_hyp t1) in
+  PLam(idh, export_prop p, convert_hyp t)
 
 let fprintf_pterm ppf t =
   let rec print_pterm ppf t =
     match t with
     | PVar(x) -> fprintf ppf "%s" x
-    | PLam(x, a, t1) -> fprintf ppf "@[%s :@<2> %a =>@ %a@]" x print_pterm a print_pterm t1
-    | PPi (x, a, b) -> fprintf ppf "@[%s :@<2> %a ->@ %a" x print_pterm a print_pterm b
-    | PArr(a, b) -> fprintf ppf "@[%a ->@ %a@]" print_left_arr a print_pterm b
-    | PApp(t1, t2) -> fprintf ppf "@[<2>%a@ %a@]" print_left_app t1 print_right_app t2
+    | PLam(x, a, t1) -> fprintf ppf "%s : %a => %a" x print_pterm a print_pterm t1
+    | PPi (x, a, b) -> fprintf ppf "%s : %a -> %a" x print_pterm a print_pterm b
+    | PArr(a, b) -> fprintf ppf "%a -> %a" print_left_arr a print_pterm b
+    | PApp(t1, t2) -> fprintf ppf "%a %a" print_left_app t1 print_right_app t2
     | PHyp(p) ->
         fprintf str_formatter "%a" print_pterm (export_term p); (* There cannot be a free hypothesis in (export_term p), so this won't loop. *)
         failwith (sprintf "free hypothesis remaining: %s" (flush_str_formatter ()))
+    | PHLam(p, t1) -> print_pterm ppf (convert_hyp t1 p)
   and print_left_arr ppf t =
     match t with
-    | PArr(_) -> fprintf ppf "@[(%a)@]" print_pterm t
+    | PArr(_) -> fprintf ppf "(%a)" print_pterm t
     | _ -> fprintf ppf "%a" print_pterm t
   and print_left_app ppf t =
     match t with
-    | PLam(_) | PPi(_) -> fprintf ppf "@[(%a)@]" print_pterm t
+    | PLam(_) | PPi(_) | PHLam(_) -> fprintf ppf "(%a)" print_pterm t
     | _ -> fprintf ppf "%a" print_pterm t
   and print_right_app ppf t =
     match t with
-    | PLam(_) | PApp(_) -> fprintf ppf "@[(%a)@]" print_pterm t
+    | PLam(_) | PPi(_) | PHLam(_) | PApp(_) -> fprintf ppf "(%a)" print_pterm t
     | _ -> fprintf ppf "%a" print_pterm t in
   print_pterm ppf t
 

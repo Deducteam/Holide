@@ -74,6 +74,7 @@ let export_var (idx, a) = export_name var_prefix idx
 let export_cst c =
   match c with
   | "=" -> "eq"
+  | "select" -> "select"
   | "/\\\\" -> "and"
   | "\\\\/" -> "or"
   | "~" -> "not"

@@ -46,7 +46,7 @@ let appThm thmfg thmtu =
   let t', u' = export_term t, export_term u in
   assert (a = type_of t);
   Thm(context_union gamma delta, eq (App(f, t)) (App(g, u)),
-    PApp(PApp(PApp(PApp(PApp(PApp(PApp(PApp(PVar("hol.APP_THM"), a'), b'), f'), g'), t'), u'), hfg), htu))
+    PApp(PApp(PApp(PApp(PApp(PApp(PApp(PApp(PVar("APP_THM"), a'), b'), f'), g'), t'), u'), hfg), htu))
 
 let assume p =
   assert (is_bool (type_of p));
@@ -62,7 +62,7 @@ let betaConv xtu =
   let xtu = App(Lam(x, t), u) in
   let xtu' = export_term xtu in
   Thm([], eq xtu (subst [x, u] t),
-    PApp(PApp(PVar("hol.REFL"), a'), xtu'))
+    PApp(PApp(PVar("REFL"), a'), xtu'))
 
 let deductAntiSym thmp thmq =
   let Thm(gamma, p, hp) = thmp in
@@ -80,14 +80,14 @@ let refl t =
   let a' = export_raw_type (type_of t) in
   let t' = export_term t in
   Thm([], eq t t,
-    PApp(PApp(PVar("hol.REFL"), a'), t'))
+    PApp(PApp(PVar("REFL"), a'), t'))
 
 (* The type variables are instantiated first, followed by the term variables. *)
-let instThm theta sigma thmp =
+let substThm theta sigma thmp =
   let Thm(gamma, p, hp) = thmp in
   let s t = subst sigma (type_subst theta t) in
-  Thm(List.map s gamma, s p,
-    export_subst sigma (export_type_subst theta hp))
+  let hp' = export_subst theta sigma gamma p hp in
+  Thm(List.map s gamma, s p, hp')
 
 (* Instantiates the free variables that are in fv but are not in vars to
    eliminate them. In the rule eqMp, some free variables can appear in the
@@ -95,7 +95,7 @@ let instThm theta sigma thmp =
 let elim_free_vars fv vars t =
   let inst_var t x =
     let _, a = x in
-    PApp(abstract_var t x, PApp(PVar("hol.witness"), export_raw_type a)) in
+    PApp(abstract_var t x, PApp(PVar("witness"), export_raw_type a)) in
   List.fold_left inst_var t fv
 
 let eqMp thmpq thmr =
@@ -113,19 +113,27 @@ let eqMp thmpq thmr =
   let hp = elim_free_vars fv vars hp in
   let hpq = elim_free_vars fv vars hpq in
   Thm(context_union gamma delta, q,
-    PApp(PApp(PApp(PApp(PVar("hol.EQ_MP"), p'), q'), hpq), hp))
+    PApp(PApp(PApp(PApp(PVar("EQ_MP"), p'), q'), hpq), hp))
 
 let defineConst c t =
-  let ty_vars, a = define_new_constant c t in
-  let a' = List.fold_left gen_tvar (export_type a) ty_vars in
-  let t' = List.fold_left abstract_tvar (export_term t) ty_vars in
-  output_definition (Name.export_cst c) a' t';
-  let args = List.map (fun x -> TyVar(x)) ty_vars in
-  let c = Cst(c, args) in
-  let a' = export_raw_type a in
-  let c' = export_term (c) in
-  Thm([], eq c t,
-    PApp(PApp(PVar("hol.REFL"), a'), c'))
+  match c with
+  | "==>" ->
+      Thm([], eq (Cst(c, [])) t,
+        PVar("EQUIV_IMP_HIMP"))
+  | "!" ->
+      Thm([], eq (Cst(c, [TyVar("A")])) t,
+        PApp(PVar("EQUIV_FORALL_HFORALL"), PVar("A")))
+  | _ ->
+    let ty_vars, a = define_new_constant c t in
+    let a' = List.fold_left gen_tvar (export_type a) ty_vars in
+    let t' = List.fold_left abstract_tvar (export_term t) ty_vars in
+    output_definition (Name.export_cst c) a' t';
+    let args = List.map (fun x -> TyVar(x)) ty_vars in
+    let c = Cst(c, args) in
+    let a' = export_raw_type a in
+    let c' = export_term (c) in
+    Thm([], eq c t,
+      PApp(PApp(PVar("REFL"), a'), c'))
 
 let axiom gamma p =
   let statement = close_gen gamma p (export_prop p) in

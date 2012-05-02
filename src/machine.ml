@@ -151,7 +151,7 @@ let process_command stack cmd =
         | _ -> failwith "not a term substitution" in
       let theta = List.map extract_type_subst theta in
       let sigma = List.map extract_term_subst sigma in
-      OThm(step cmd (instThm theta sigma thm)) :: stack
+      OThm(step cmd (substThm theta sigma thm)) :: stack
   | "thm", OTerm(p) :: OList(qs) :: OThm(thm) :: stack ->
       print_thm (Name.fresh_thm ()) thm;
       stack
