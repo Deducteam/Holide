@@ -36,14 +36,6 @@ select : a : type -> term (arr (arr a bool) a).
 [] select --> hol.select.
 witness : a : type -> term a.
 [] witness --> hol.witness.
-imp : term (arr bool (arr bool bool)).
-[] imp --> hol.imp.
-forall : a : type -> term (arr (arr a bool) bool).
-[] forall --> hol.forall.
-himp : term (arr bool (arr bool bool)).
-[] himp --> hol.himp.
-hforall : a : type -> term (arr (arr a bool) bool).
-[] hforall --> hol.hforall.
 
 eps : term bool -> Type.
 [] eps --> hol.eps.
@@ -57,10 +49,6 @@ EQ_MP : p : term bool -> q : term bool -> eps (eq bool p q) -> eps p -> eps q.
 [] EQ_MP --> hol.EQ_MP.
 APP_THM : a : type -> b : type -> f : term (arr a b) -> g : term (arr a b) -> t : term a -> u : term a -> eps (eq (arr a b) f g) -> eps (eq a t u) -> eps (eq b (f t) (g u)).
 [] APP_THM --> hol.APP_THM.
-EQUIV_IMP_HIMP : eps (eq (arr bool (arr bool bool)) imp himp).
-[] EQUIV_IMP_HIMP --> hol.EQUIV_IMP_HIMP.
-EQUIV_FORALL_HFORALL : a : type -> eps (eq (arr (arr a bool) bool) (forall a) (hforall a)).
-[] EQUIV_FORALL_HFORALL --> hol.EQUIV_FORALL_HFORALL.
 ;----------------------------- END HOL SIGNATURE ------------------------------;
 @."
 

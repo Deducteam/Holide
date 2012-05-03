@@ -115,31 +115,31 @@ let eqMp thmpq thmr =
   Thm(context_union gamma delta, q,
     PApp(PApp(PApp(PApp(PVar("EQ_MP"), p'), q'), hpq), hp))
 
-let defineConst c t =
-  match c with
-  | "==>" ->
-      Thm([], eq (Cst(c, [])) t,
-        PVar("EQUIV_IMP_HIMP"))
-  | "!" ->
-      Thm([], eq (Cst(c, [TyVar("A")])) t,
-        PApp(PVar("EQUIV_FORALL_HFORALL"), PVar("A")))
-  | _ ->
-    let ty_vars, a = define_new_constant c t in
-    let a' = List.fold_left gen_tvar (export_type a) ty_vars in
-    let t' = List.fold_left abstract_tvar (export_term t) ty_vars in
-    output_definition (Name.export_cst c) a' t';
-    let args = List.map (fun x -> TyVar(x)) ty_vars in
-    let c = Cst(c, args) in
-    let a' = export_raw_type a in
-    let c' = export_term (c) in
-    Thm([], eq c t,
-      PApp(PApp(PVar("REFL"), a'), c'))
+let defineConst cname t =
+  let ty_vars, a = define_new_constant cname t in
+  let a' = List.fold_left gen_tvar (export_type a) ty_vars in
+  let args = List.map (fun x -> TyVar(x)) ty_vars in
+  let c = Cst(cname, args) in
+  (* Short-circuit the definitions. *)
+  let def, proof =
+    match cname with
+    | "==>" ->
+        (PVar("hol.imp"), PVar("hol.EQUIV_IMP_HIMP"))
+    | "!" ->
+        (PVar("hol.forall"), PApp(PVar("hol.EQUIV_FORALL_HFORALL"), PVar(Name.export_tyvar "A")))
+    | _ ->
+        let a' = export_raw_type a in
+        let c' = export_term (c) in
+        let t' = List.fold_left abstract_tvar (export_term t) ty_vars in
+        (t', PApp(PApp(PVar("REFL"), a'), c')) in
+  output_definition (Name.export_cst cname) a' def;
+  Thm([], eq c t, proof)
 
 let axiom gamma p =
   let statement = close_gen gamma p (export_prop p) in
   let name = Name.fresh_axm () in
   output_declaration name statement;
-  Thm(gamma, p, PVar(name))
+  Thm(gamma, p, open_abstract gamma p (PVar(name)))
 
 (* Abstract over the free hypotheses, the free variables, and the free type
    variables in the theorem to obtain a well-typed "standalone" proof term. *)

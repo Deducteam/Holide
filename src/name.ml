@@ -65,12 +65,15 @@ let export_name prefix name =
      starts_with dict_prefix name     
   then name ^ "'" else name
 
-(* This is unsafe because term variables can have the same name but different
-   types. However, it usually does not cause problems in practice. *)
-let export_var (idx, a) = export_name var_prefix idx
+let export_var (idx, a) =
+  (* Term variables can have the same name but different types. *)
+  let name =
+    if not !mangle_names then idx else
+    idx ^ "_" ^ (string_of_int (Hashtbl.hash a)) in
+  export_name var_prefix name
 
 (* Filter logical connectives because Dedukti only accepts alpha-numerical
-   characters. This is also unsafe, but does not cause problems in practice. *)
+   characters. *)
 let export_cst c =
   match c with
   | "=" -> "eq"
@@ -79,8 +82,6 @@ let export_cst c =
   | "\\\\/" -> "or"
   | "~" -> "not"
   | "==>" -> "imp"
-  | "T" -> "T"
-  | "F" -> "F"
   | "!" -> "forall"
   | "?" -> "exists"
   | "?!" -> "exists_unique"
