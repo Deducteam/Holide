@@ -1,24 +1,40 @@
-OBJS=name.cmo type.cmo term.cmo proof.cmo output.cmo thm.cmo machine.cmo main.cmo
+EXECUTABLE = holide
+MODULES    = name type term proof output thm machine main
 
-holide: $(OBJS)
-	ocamlc -o holide $(OBJS)
+OCAMLC    = ocamlc
+OCAMLOPT  = ocamlopt
+OCAMLDEP  = ocamldep
 
-# Common rules
-.SUFFIXES: .ml .mli .cmo .cmi
+BFLAGS =
+OFLAGS =
 
-.ml.cmo:
-	ocamlc -c $<
+$(EXECUTABLE): $(MODULES:%=%.cmx)
+	$(OCAMLOPT) $(OFLAGS) -o $(EXECUTABLE) $(MODULES:%=%.cmx)
 
-.mli.cmi:
-	ocamlc -c $<
+byte: $(MODULES:%=%.cmo)
+	$(OCAMLC) $(BFLAGS) -o $(EXECUTABLE) $(MODULES:%=%.cmo)
+
+opt: $(MODULES:%=%.cmx)
+	$(OCAMLOPT) $(OFLAGS) -o $(EXECUTABLE) $(MODULES:%=%.cmx)
+
+%.cmo: %.ml
+	$(OCAMLC) $(BFLAGS) -c $*.ml
+%.cmi: %.mli
+	$(OCAMLC) $(BFLAGS) -c $*.mli
+%.cmx: %.ml
+	$(OCAMLOPT) $(OFLAGS) -c $*.ml
+
+# Dependencies
+.depend:
+	ocamldep *.ml *.mli > .depend
+
+# Statistics
+stat: clean
+	wc -l *.ml parser.mly lexer.mll
 
 # Clean up
 clean:
-	rm -f holide
-	rm -f *.cmi *.cmo
-
-# Dependencies
-depend:
-	ocamldep *.mli *.ml > .depend
+	rm -f $(EXECUTABLE)
+	rm -f *.cmi *.cmo *.cmx *.o
 
 include .depend

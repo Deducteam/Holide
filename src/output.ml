@@ -25,7 +25,9 @@ type : Type.
 [] type --> hol.type.
 bool : type.
 [] bool --> hol.bool.
-arr  : type -> type -> type.
+ind : type.
+[] ind --> hol.ind.
+arr : type -> type -> type.
 [] arr --> hol.arr.
 
 term : type -> Type.
@@ -37,18 +39,8 @@ select : a : type -> term (arr (arr a bool) a).
 witness : a : type -> term a.
 [] witness --> hol.witness.
 
-eps : term bool -> Type.
-[] eps --> hol.eps.
-FUN_EXT : a : type -> b : type -> p : term (arr a b) -> q : term (arr a b) -> (x : term a -> eps (eq b (p x) (q x))) -> eps (eq (arr a b) p q).
-[] FUN_EXT --> hol.FUN_EXT.
-PROP_EXT : p : term bool -> q : term bool -> (eps q -> eps p) -> (eps p -> eps q) -> eps (eq bool p q).
-[] PROP_EXT --> hol.PROP_EXT.
-REFL : a : type -> t : term a -> eps (eq a t t).
-[] REFL --> hol.REFL.
-EQ_MP : p : term bool -> q : term bool -> eps (eq bool p q) -> eps p -> eps q.
-[] EQ_MP --> hol.EQ_MP.
-APP_THM : a : type -> b : type -> f : term (arr a b) -> g : term (arr a b) -> t : term a -> u : term a -> eps (eq (arr a b) f g) -> eps (eq a t u) -> eps (eq b (f t) (g u)).
-[] APP_THM --> hol.APP_THM.
+proof : term bool -> Type.
+[] proof --> hol.proof.
 ;----------------------------- END HOL SIGNATURE ------------------------------;
 @."
 

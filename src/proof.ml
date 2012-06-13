@@ -40,28 +40,28 @@ let rec export_term t =
       PApp(export_term t1, export_term t2)
 
 let export_prop p =
-  PApp(PVar("eps"), export_term p)
+  PApp(PVar("proof"), export_term p)
 
 (* Operations for abstracting over variables. Useful for generalizing theorems. *)
 
-let abstract_tvar t a =
+let abstract_tvar a t =
   PLam(Name.export_tyvar a, PVar("type"), t)
 
-let abstract_var t x =
+let abstract_var x t =
   let (_, a) = x in
   PLam(Name.export_var x, export_type a, t)
 
-let abstract_hyp t p =
+let abstract_hyp p t =
   PHLam(p, t)
 
-let gen_tvar t a =
+let gen_tvar a t =
   PPi(Name.export_tyvar a, PVar("type"), t)
 
-let gen_var t x =
+let gen_var x t =
   let (_, a) = x in
   PPi(Name.export_var x, export_type a, t)
 
-let gen_hyp t p =
+let gen_hyp p t =
   PArr(export_prop p, t)
 
 let all_free_vars gamma p =
@@ -71,16 +71,16 @@ let all_free_vars gamma p =
 
 let close_gen gamma p t =
   let fv, ftv = all_free_vars gamma p in
-  let t = List.fold_left gen_hyp t gamma in
-  let t = List.fold_left gen_var t fv in
-  let t = List.fold_left gen_tvar t ftv in
+  let t = List.fold_right gen_hyp gamma t in
+  let t = List.fold_right gen_var fv t in
+  let t = List.fold_right gen_tvar ftv t in
   t
 
 let close_abstract gamma p t =
   let fv, ftv = all_free_vars gamma p in
-  let t = List.fold_left abstract_hyp t gamma in
-  let t = List.fold_left abstract_var t fv in
-  let t = List.fold_left abstract_tvar t ftv in
+  let t = List.fold_right abstract_hyp gamma t in
+  let t = List.fold_right abstract_var fv t in
+  let t = List.fold_right abstract_tvar ftv t in
   t
 
 (* Operations for specializing theorems. *)
@@ -97,9 +97,9 @@ let apply_hyp t p =
 (* Inverse of the close_abstract operation *)
 let open_abstract gamma p t =
   let fv, ftv = all_free_vars gamma p in
-  let t = List.fold_left apply_tvar t (List.rev ftv) in
-  let t = List.fold_left apply_var t (List.rev fv) in
-  let t = List.fold_left apply_hyp t (List.rev gamma) in
+  let t = List.fold_left apply_tvar t ftv in
+  let t = List.fold_left apply_var t fv in
+  let t = List.fold_left apply_hyp t gamma in
   t
 
 (* Translate substitutions *)
@@ -108,9 +108,9 @@ let export_subst theta sigma gamma p t =
   let s t = subst sigma (type_subst theta t) in
   let fv, ftv = all_free_vars gamma p in
   let t = close_abstract gamma p t in
-  let t = List.fold_left (fun t a -> PApp(t, export_raw_type (type_inst theta (TyVar(a))))) t (List.rev ftv) in
-  let t = List.fold_left (fun t x -> PApp(t, export_term (s (Var(x))))) t (List.rev fv) in
-  let t = List.fold_left apply_hyp t (List.rev (List.map s gamma)) in
+  let t = List.fold_left (fun t a -> PApp(t, export_raw_type (type_inst theta (TyVar(a))))) t ftv in
+  let t = List.fold_left (fun t x -> PApp(t, export_term (s (Var(x))))) t fv in
+  let t = List.fold_left apply_hyp t (List.map s gamma) in
   t
 
 (* Pretty printing *)

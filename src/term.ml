@@ -14,7 +14,7 @@ type term =
    it contains. *)
 let cst_type_schemes =
   ref [
-    "=", (["A"], ty_arr (TyVar("A")) (ty_arr (TyVar("A")) ty_bool));
+    "eq", (["A"], ty_arr (TyVar("A")) (ty_arr (TyVar("A")) ty_bool));
     "select", (["A"], ty_arr (ty_arr (TyVar("A")) ty_bool) (TyVar("A")));]
 
 (* Return the type of the constant c with type parameters ty_args. *)
@@ -130,12 +130,21 @@ let define_new_constant c t =
   cst_type_schemes := (c, (ftv, a)) :: !cst_type_schemes;
   ftv, a
 
+let define_new_typeop opname absname repname type_vars p t =
+  if List.mem_assoc opname !type_arities then failwith (Printf.sprintf "type %s already defined" opname) else
+  type_arities := (opname, List.length type_vars) :: !type_arities;
+  let type_args = List.map (fun x -> TyVar(x)) type_vars in
+  let xtype = type_of t in
+  let ytype = TyApp(opname, type_args) in
+  cst_type_schemes := (repname, (type_vars, ty_arr ytype xtype)) :: (absname, (type_vars, ty_arr xtype ytype)) :: !cst_type_schemes;
+  ytype, Cst(absname, type_args), Cst(repname, type_args)
+
 (* Match the type scheme of the constant c with the type a, generating a
    type substitution for the type variables. *)
 let match_constant_type c a =
   let (ty_vars, b) =
     try List.assoc c !cst_type_schemes
-    with Not_found -> failwith "constant not declared" in
+    with Not_found -> failwith (Printf.sprintf "constant %s not declared" c) in
   let rec match_type a b theta =
     match a, b with
     | a, TyVar(x) ->
@@ -153,10 +162,10 @@ let match_constant_type c a =
 let eq t1 t2 =
   let a = type_of t1 in
   assert (a = type_of t2);
-  App(App(Cst("=", [a]), t1), t2)
+  App(App(Cst("eq", [a]), t1), t2)
 
 let get_eq t =
   match t with
-  | App(App(Cst("=", _), t1), t2) -> t1, t2
+  | App(App(Cst("eq", _), t1), t2) -> t1, t2
   | _ -> failwith "not an equality"
 

@@ -83,16 +83,45 @@ let is_digit c =
 let process_num stack cmd =
   ONum(int_of_string cmd) :: stack
 
-(* Extract the name from the cmd string. For now, we just take the last
-   component of the name and drop the rest. For example, "Data.Bool.T" will
-   give the name T. *)
+(* Escape non-alphanumerical characters. *)
+let escape name =
+  match name with
+  | "=" -> "eq"
+  | "select" -> "select"
+  | "Data.Bool.T" -> "top"
+  | "Data.Bool.F" -> "bot"
+  | "Data.Bool.~" -> "not"
+  | "Data.Bool./\\\\" -> "and"
+  | "Data.Bool.\\\\/" -> "or"
+  | "Data.Bool.==>" -> "imp"
+  | "Data.Bool.<=>" -> "iff"
+  | "Data.Bool.!" -> "forall"
+  | "Data.Bool.?" -> "exists"
+  | "Data.Bool.?!" -> "exists_unique"
+  | "bool" -> "bool"
+  | "ind" -> "ind"
+  | "->" -> "arr"
+  | name ->
+      let hex = "0123456789abcdef" in
+      let s = String.create 256 in
+      let j = ref 0 in
+      for i = 0 to String.length name - 1 do
+        let c = name.[i] in
+        let code = Char.code c in
+        if c = '_' then (s.[!j] <- '_'; s.[!j + 1] <- '_'; j := !j + 2) else
+        if (Char.code '0' <= code && code <= Char.code '9') ||
+            (Char.code 'a' <= code && code <= Char.code 'z') ||
+            (Char.code 'A' <= code && code <= Char.code 'Z')
+          then (s.[!j] <- c; j := !j + 1) else
+        (s.[!j] <- hex.[code / 16]; s.[!j + 1] <- hex.[code mod 16]; j := !j + 2) done;
+      String.sub s 0 !j
+
+(* Extract the name from the cmd string. *)
 let process_name stack cmd =
-  let start =
-    try (String.rindex cmd '.') + 1
-    with Not_found -> 1 in
+  let start = 1 in
   let len = (String.length cmd) - start - 1 in
   let name = String.sub cmd start len in
-  OName(name) :: stack
+  OName(escape name) :: stack
 
 let process_command stack cmd =
   let c = String.get cmd 0 in
@@ -109,7 +138,7 @@ let process_command stack cmd =
       let extract_term obj =
         match obj with
         | OTerm(q) -> q
-        | _ -> failwith "not an object term" in
+        | _ -> failwith "not a term object" in
       OThm(step cmd (axiom (List.map extract_term qs) p)) :: stack
   | "betaConv", OTerm(xtu) :: stack -> OThm(step cmd (betaConv xtu)) :: stack
   | "cons", OList(tail) :: head :: stack -> OList(head :: tail) :: stack
@@ -123,8 +152,14 @@ let process_command stack cmd =
       obj :: stack
   | "defineConst", OTerm(t) :: OName(n) :: stack ->
       let thm = defineConst n t in
-      OThm(step cmd (thm)) :: OConst(n) :: stack
-  | "defineTypeOp", stack -> failwith "not implemented"
+      OThm(step cmd thm) :: OConst(n) :: stack
+  | "defineTypeOp", OThm(thmpt) :: OList(type_vars) :: OName(repname) :: OName(absname) :: OName(opname) :: stack ->
+      let extract_name obj =
+        match obj with
+        | OName(n) -> n
+        | _ -> failwith "not a name object" in
+      let thmrepabs, thmabsrep = defineTypeOp opname absname repname (List.map extract_name type_vars) thmpt in
+      OThm(step cmd thmrepabs) :: OThm(step cmd thmabsrep) :: OConst(repname) :: OConst(absname) :: OTypeOp(opname) :: stack
   | "eqMp", OThm(thmp) :: OThm(thmpq) :: stack -> OThm(step cmd (eqMp thmpq thmp)) :: stack
   | "nil", stack -> OList([]) :: stack
   | "opType", OList(args) :: OTypeOp(tyop) :: stack ->
@@ -164,18 +199,17 @@ let process_command stack cmd =
 let read_article filename =
   let file = open_in filename in
   let rec loop line_number stack =
-    try
-      let cmd = input_line file in
-      let state =
-        try process_command stack cmd
-        with
-        | e ->
-            print_stack stack;
-            eprintf "In article %s, at line %d: %s\n" filename line_number cmd;
-            raise e in
-      loop (line_number + 1) state
-    with End_of_file -> () in
-  loop 1 [];
+    let cmd = input_line file in
+    let state =
+      if line_number mod 100 = 0 then (eprintf "Processing line %d...\r" line_number; flush_all ()) else ();
+      try process_command stack cmd
+      with
+      | e ->
+          print_stack stack;
+          eprintf "In article %s, at line %d: %s\n" filename line_number cmd;
+          raise e in
+    loop (line_number + 1) state in
+  try loop 1 [] with End_of_file -> ();
   close_in file
 
 

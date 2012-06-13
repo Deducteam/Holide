@@ -23,11 +23,11 @@ let step_prefix = "step_"
 
 let var_prefix = "var_"
 
-let cst_prefix = "cst_"
+let cst_prefix = ""
 
 let tyvar_prefix = "tyvar_"
 
-let tyop_prefix = "tyop_"
+let tyop_prefix = ""
 
 (* If set to false, ignore name mangling for HOL names. This is unsafe, but
    produces more readable code. *)
@@ -56,6 +56,7 @@ let starts_with prefix name =
   with Invalid_argument _ -> false
 
 let export_name prefix name =
+(*  let name = escape name in*)
   if !mangle_names then prefix ^ name else
   (* When name mangling is deactivated, at least make sure the name does not
      clash with the ones that we generated. This probably never occurs. *)
@@ -66,7 +67,8 @@ let export_name prefix name =
   then name ^ "'" else name
 
 let export_var (idx, a) =
-  (* Term variables can have the same name but different types. *)
+  (* Term variables can have the same name but different types, so we suffix
+     the hash of the type to avoid clashes. *)
   let name =
     if not !mangle_names then idx else
     idx ^ "_" ^ (string_of_int (Hashtbl.hash a)) in
@@ -74,24 +76,9 @@ let export_var (idx, a) =
 
 (* Filter logical connectives because Dedukti only accepts alpha-numerical
    characters. *)
-let export_cst c =
-  match c with
-  | "=" -> "eq"
-  | "select" -> "select"
-  | "/\\\\" -> "and"
-  | "\\\\/" -> "or"
-  | "~" -> "not"
-  | "==>" -> "imp"
-  | "!" -> "forall"
-  | "?" -> "exists"
-  | "?!" -> "exists_unique"
-  | _ -> export_name cst_prefix c
+let export_cst c = export_name cst_prefix c
 
 let export_tyvar a = export_name tyvar_prefix a
 
-let export_tyop tyop =
-  match tyop with
-  | "bool" -> "bool"
-  | "->" -> "arr"
-  | _ -> export_name tyop_prefix tyop
+let export_tyop tyop = export_name tyop_prefix tyop
 
