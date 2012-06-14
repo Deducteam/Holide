@@ -90,10 +90,10 @@ let substThm theta sigma thmp =
   let hp' = export_subst theta sigma gamma p hp in
   Thm(List.map s gamma, s p, hp')
 
-(* Instantiates the free variables that are in fv but are not in vars to
+(* Instantiates the free variables that are in fv to
    eliminate them. In the rule eqMp, some free variables can appear in the
    premises but not in the conclusion, so wee need to eliminate them. *)
-let elim_free_vars fv vars t =
+let elim_free_vars fv t =
   let inst_var t x =
     let _, a = x in
     PApp(abstract_var x t, PApp(PVar("witness"), export_raw_type a)) in
@@ -110,9 +110,9 @@ let eqMp thmpq thmr =
   (* Eliminate free variables that appear in p but not in gamma, delta or q. *)
   let vars, _ = all_free_vars gamma_delta q in
   let fv = List.filter (fun x -> not (List.mem x vars)) (free_vars p []) in 
-  let p' = elim_free_vars fv vars p' in
-  let hp = elim_free_vars fv vars hp in
-  let hpq = elim_free_vars fv vars hpq in
+  let p' = elim_free_vars fv p' in
+  let hp = elim_free_vars fv hp in
+  let hpq = elim_free_vars fv hpq in
   Thm(context_union gamma delta, q,
     PApp(PApp(PApp(PApp(PVar("hol.EQ_MP"), p'), q'), hpq), hp))
 
@@ -153,18 +153,27 @@ let defineTypeOp opname absname repname type_vars thmpt =
   let x = Var("r", xtype) in
   let y = Var("a", ytype) in
   let kind = List.fold_right gen_tvar type_vars (PVar("hol.type")) in
-  let typedef = List.fold_right abstract_tvar type_vars (PApp(PApp(PApp(PVar("hol.typedef"), export_raw_type xtype), export_term p), export_term t)) in
+  let xtype' = export_raw_type xtype in
+  let ytype' = export_raw_type ytype in
+  let x' = export_term x in
+  let y' = export_term y in
+  let p' = export_term p in
+  let t' = export_term t in
+  let fv = free_vars t [] in
+  let t' = elim_free_vars fv t' in
+  let hpt = elim_free_vars fv hpt in
+  let typedef = List.fold_right abstract_tvar type_vars (PApp(PApp(PApp(PVar("hol.typedef"), xtype'), p'), t')) in
   output_definition (Name.export_tyop opname) kind typedef;
   let type_abs' = List.fold_right gen_tvar type_vars (export_type (ty_arr xtype ytype)) in
-  let def_abs' = List.fold_right abstract_tvar type_vars (PApp(PApp(PApp(PVar("hol.abs"), export_raw_type xtype), export_term p), export_term t)) in
+  let def_abs' = List.fold_right abstract_tvar type_vars (PApp(PApp(PApp(PVar("hol.abs"), xtype'), p'), t')) in
   output_definition (Name.export_cst absname) type_abs' def_abs';
   let type_rep' = List.fold_right gen_tvar type_vars (export_type (ty_arr ytype xtype)) in
-  let def_rep' = List.fold_right abstract_tvar type_vars (PApp(PApp(PApp(PVar("hol.rep"), export_raw_type xtype), export_term p), export_term t)) in
+  let def_rep' = List.fold_right abstract_tvar type_vars (PApp(PApp(PApp(PVar("hol.rep"), xtype'), p'), t')) in
   output_definition (Name.export_cst repname) type_rep' def_rep';
   (Thm([], eq (App(p, x)) (eq (App(rep, App(abs, x))) x),
-    PApp(PApp(PApp(PApp(PApp(PVar("hol.REP_ABS"), export_raw_type xtype), export_term p), export_term t), hpt), export_term x)),
+    PApp(PApp(PApp(PApp(PApp(PVar("hol.REP_ABS"), xtype'), p'), t'), hpt), x')),
   Thm([], eq (App(abs, App(rep, y))) y,
-    PApp(PApp(PVar("hol.REFL"), export_raw_type ytype), export_term y)))
+    PApp(PApp(PVar("hol.REFL"), ytype'), y')))
 
 let axiom gamma p =
   let statement = close_gen gamma p (export_prop p) in

@@ -1,21 +1,19 @@
 EXECUTABLE = holide
 MODULES    = name type term proof output thm machine main
+LIBRARIES  = str
 
-OCAMLC    = ocamlc
-OCAMLOPT  = ocamlopt
-OCAMLDEP  = ocamldep
+OCAMLC   = ocamlc
+OCAMLOPT = ocamlopt
+OCAMLDEP = ocamldep
 
 BFLAGS =
 OFLAGS =
 
 $(EXECUTABLE): $(MODULES:%=%.cmx)
-	$(OCAMLOPT) $(OFLAGS) -o $(EXECUTABLE) $(MODULES:%=%.cmx)
+	$(OCAMLOPT) $(OFLAGS) -o $(EXECUTABLE) $(LIBRARIES:%=%.cmxa) $(MODULES:%=%.cmx)
 
-byte: $(MODULES:%=%.cmo)
-	$(OCAMLC) $(BFLAGS) -o $(EXECUTABLE) $(MODULES:%=%.cmo)
-
-opt: $(MODULES:%=%.cmx)
-	$(OCAMLOPT) $(OFLAGS) -o $(EXECUTABLE) $(MODULES:%=%.cmx)
+$(EXECUTABLE).byte: $(MODULES:%=%.cmo)
+	$(OCAMLC) $(BFLAGS) -o $(EXECUTABLE).byte $(LIBRARIES:%=%.cma) $(MODULES:%=%.cmo)
 
 %.cmo: %.ml
 	$(OCAMLC) $(BFLAGS) -c $*.ml
@@ -34,7 +32,7 @@ stat: clean
 
 # Clean up
 clean:
-	rm -f $(EXECUTABLE)
+	rm -f $(EXECUTABLE) $(EXECUTABLE).byte
 	rm -f *.cmi *.cmo *.cmx *.o
 
 include .depend

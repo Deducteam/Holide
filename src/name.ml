@@ -69,9 +69,7 @@ let export_name prefix name =
 let export_var (idx, a) =
   (* Term variables can have the same name but different types, so we suffix
      the hash of the type to avoid clashes. *)
-  let name =
-    if not !mangle_names then idx else
-    idx ^ "_" ^ (string_of_int (Hashtbl.hash a)) in
+  let name = idx ^ "_" ^ (string_of_int (Hashtbl.hash a)) in
   export_name var_prefix name
 
 (* Filter logical connectives because Dedukti only accepts alpha-numerical

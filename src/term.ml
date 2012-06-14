@@ -131,6 +131,7 @@ let define_new_constant c t =
   ftv, a
 
 let define_new_typeop opname absname repname type_vars p t =
+  assert (free_vars p [] = []);
   if List.mem_assoc opname !type_arities then failwith (Printf.sprintf "type %s already defined" opname) else
   type_arities := (opname, List.length type_vars) :: !type_arities;
   let type_args = List.map (fun x -> TyVar(x)) type_vars in

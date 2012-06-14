@@ -85,43 +85,47 @@ let process_num stack cmd =
 
 (* Escape non-alphanumerical characters. *)
 let escape name =
-  match name with
-  | "=" -> "eq"
-  | "select" -> "select"
-  | "Data.Bool.T" -> "top"
-  | "Data.Bool.F" -> "bot"
-  | "Data.Bool.~" -> "not"
-  | "Data.Bool./\\\\" -> "and"
-  | "Data.Bool.\\\\/" -> "or"
-  | "Data.Bool.==>" -> "imp"
-  | "Data.Bool.<=>" -> "iff"
-  | "Data.Bool.!" -> "forall"
-  | "Data.Bool.?" -> "exists"
-  | "Data.Bool.?!" -> "exists_unique"
-  | "bool" -> "bool"
-  | "ind" -> "ind"
-  | "->" -> "arr"
-  | name ->
-      let hex = "0123456789abcdef" in
-      let s = String.create 256 in
-      let j = ref 0 in
-      for i = 0 to String.length name - 1 do
-        let c = name.[i] in
-        let code = Char.code c in
-        if c = '_' then (s.[!j] <- '_'; s.[!j + 1] <- '_'; j := !j + 2) else
-        if (Char.code '0' <= code && code <= Char.code '9') ||
-            (Char.code 'a' <= code && code <= Char.code 'z') ||
-            (Char.code 'A' <= code && code <= Char.code 'Z')
-          then (s.[!j] <- c; j := !j + 1) else
-        (s.[!j] <- hex.[code / 16]; s.[!j + 1] <- hex.[code mod 16]; j := !j + 2) done;
-      String.sub s 0 !j
+  let hex = "0123456789abcdef" in
+  let s = String.create 256 in
+  let j = ref 0 in
+  for i = 0 to String.length name - 1 do
+    let c = name.[i] in
+    let code = Char.code c in
+    if c = '_' then (s.[!j] <- '_'; s.[!j + 1] <- '_'; j := !j + 2) else
+    if (Char.code '0' <= code && code <= Char.code '9') ||
+        (Char.code 'a' <= code && code <= Char.code 'z') ||
+        (Char.code 'A' <= code && code <= Char.code 'Z')
+      then (s.[!j] <- c; j := !j + 1) else
+    (s.[!j] <- '_'; s.[!j + 1] <- hex.[code / 16]; s.[!j + 2] <- hex.[code mod 16]; j := !j + 3) done;
+  String.sub s 0 !j
 
 (* Extract the name from the cmd string. *)
 let process_name stack cmd =
-  let start = 1 in
-  let len = (String.length cmd) - start - 1 in
-  let name = String.sub cmd start len in
-  OName(escape name) :: stack
+  let components = Str.split (Str.regexp "[\".]") cmd in
+  let s, sl =
+    match List.rev components with
+    | s :: sl -> s, sl
+    | _ -> failwith "invalid name" in
+  let sl = List.rev sl in
+  let name = match sl, s with
+    | [], "bool" -> "bool"
+    | [], "ind" -> "ind"
+    | [], "->" -> "arr"
+    | [], "=" -> "eq"
+    | [], "select" -> "select"
+    | ["Data"; "Bool"], "T" -> "top"
+    | ["Data"; "Bool"], "F" -> "bot"
+    | ["Data"; "Bool"], "~" -> "not"
+    | ["Data"; "Bool"], "/\\\\" -> "and"
+    | ["Data"; "Bool"], "\\\\/" -> "or"
+    | ["Data"; "Bool"], "==>" -> "imp"
+    | ["Data"; "Bool"], "<=>" -> "iff"
+    | ["Data"; "Bool"], "!" -> "forall"
+    | ["Data"; "Bool"], "?" -> "exists"
+    | ["Data"; "Bool"], "?!" -> "exists_unique"
+    | _ :: _, _ -> (escape (List.nth sl (List.length sl - 1))) ^ "_" ^ (escape s)
+    | _ -> escape s in
+  OName(name) :: stack
 
 let process_command stack cmd =
   let c = String.get cmd 0 in
@@ -151,9 +155,11 @@ let process_command stack cmd =
       dict_add k obj;
       obj :: stack
   | "defineConst", OTerm(t) :: OName(n) :: stack ->
+      eprintf "Defining constant %s..." n; prerr_newline ();
       let thm = defineConst n t in
       OThm(step cmd thm) :: OConst(n) :: stack
   | "defineTypeOp", OThm(thmpt) :: OList(type_vars) :: OName(repname) :: OName(absname) :: OName(opname) :: stack ->
+      eprintf "Defining type %s..." opname; prerr_newline ();
       let extract_name obj =
         match obj with
         | OName(n) -> n
@@ -201,10 +207,12 @@ let read_article filename =
   let rec loop line_number stack =
     let cmd = input_line file in
     let state =
-      if line_number mod 100 = 0 then (eprintf "Processing line %d...\r" line_number; flush_all ()) else ();
+      if line_number mod 10000 = 0 then (eprintf "Processing line %d...\n" line_number; flush_all ()) else ();
       try process_command stack cmd
       with
       | e ->
+          flush_all ();
+          print_newline ();
           print_stack stack;
           eprintf "In article %s, at line %d: %s\n" filename line_number cmd;
           raise e in
