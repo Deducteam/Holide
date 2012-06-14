@@ -176,6 +176,7 @@ let defineTypeOp opname absname repname type_vars thmpt =
     PApp(PApp(PVar("hol.REFL"), ytype'), y')))
 
 let axiom gamma p =
+  Printf.eprintf "Assuming axiom..."; prerr_newline ();
   let statement = close_gen gamma p (export_prop p) in
   let name = Name.fresh_axm () in
   output_declaration name statement;

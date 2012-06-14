@@ -5,7 +5,7 @@ type htype =
 | TyApp of string * htype list
 
 let type_arities =
-  ref ["arr",  2; "bool", 0]
+  ref ["arr",  2; "bool", 0; "ind", 0]
 
 (* Return all the type variables in the type a. Type variables are reported
    only once in the order that they appear in. *)
@@ -20,6 +20,13 @@ let rec type_inst theta a =
   match a with
   | TyVar(x) -> begin try List.assoc x theta with Not_found -> a end
   | TyApp(tyop, args) -> TyApp(tyop, List.map (type_inst theta) args)
+
+let ty_app op args =
+  let arity =
+    try List.assoc op !type_arities
+    with Not_found -> failwith (Printf.sprintf "type %s not declared" op) in
+  if List.length args != arity then failwith "invalid number of type arguments" else
+  TyApp(op, args)
 
 (* Shortcuts *)
 

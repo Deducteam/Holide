@@ -10,6 +10,8 @@ let set_out_channel filename =
   out_formatter := formatter_of_out_channel !out_channel;
   pp_set_margin !out_formatter 1000000000
 
+let output_raw format = fprintf !out_formatter format
+
 let output_comment comment = fprintf !out_formatter "(; %s ;)@." comment
 
 let output_definition name ty body =
@@ -20,7 +22,7 @@ let output_declaration name ty =
   fprintf !out_formatter "%s: %a.@.@." name fprintf_pterm ty
 
 let output_preamble () = fprintf !out_formatter "
-;---------------------------- BEGIN HOL SIGNATURE -----------------------------;
+(;--------------------------- BEGIN HOL SIGNATURE ----------------------------;)
 type : Type.
 [] type --> hol.type.
 bool : type.
@@ -41,6 +43,6 @@ witness : a : type -> term a.
 
 proof : term bool -> Type.
 [] proof --> hol.proof.
-;----------------------------- END HOL SIGNATURE ------------------------------;
+(;---------------------------- END HOL SIGNATURE -----------------------------;)
 @."
 

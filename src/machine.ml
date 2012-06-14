@@ -148,6 +148,10 @@ let process_command stack cmd =
   | "cons", OList(tail) :: head :: stack -> OList(head :: tail) :: stack
   | "const", OName(name) :: stack -> OConst(name) :: stack
   | "constTerm", OType(ty) :: OConst(c) :: stack ->
+      if not (List.mem_assoc c !cst_type_schemes) then begin
+        eprintf "Inventing constant %s..." c; prerr_newline ();
+        cst_type_schemes := (c, (["A"], TyVar("A"))) :: !cst_type_schemes;
+        Output.output_raw "%s : A : type -> term A.@.@." c end;
       let ty_args = match_constant_type c ty in
       OTerm(Cst(c, ty_args)) :: stack
   | "deductAntisym", OThm(thmq) :: OThm(thmp) :: stack -> OThm(step cmd (deductAntiSym thmp thmq)) :: stack
@@ -173,7 +177,15 @@ let process_command stack cmd =
         match obj with
         | OType(ty) -> ty
         | _ -> failwith "not a type object" in
-      OType(TyApp(tyop, List.map extract_type args)) :: stack
+      let args = List.map extract_type args in
+      if not (List.mem_assoc tyop !type_arities) then begin
+        Printf.eprintf "Inventing type %s..." tyop; prerr_newline ();
+        type_arities := (tyop, List.length args) :: !type_arities;
+        Output.output_raw "%s : " tyop;
+        for i = 0 to List.length args - 1 do
+          Output.output_raw "type -> " done;
+        Output.output_raw "type.@.@." end;
+      OType(ty_app tyop args) :: stack
   | "pop", _ :: stack -> stack
   | "ref", ONum(k) :: stack -> dict_find k :: stack
   | "refl", OTerm(t) :: stack -> OThm(step cmd (refl t)) :: stack
@@ -202,12 +214,16 @@ let process_command stack cmd =
   | "varType", OName(a) :: stack -> OType(TyVar(a)) :: stack
   | _ -> failwith "invalid command/state"
 
+exception Done of int
+
 let read_article filename =
   let file = open_in filename in
   let rec loop line_number stack =
-    let cmd = input_line file in
+    let cmd =
+      try input_line file
+      with _ -> raise (Done(line_number)) in
     let state =
-      if line_number mod 10000 = 0 then (eprintf "Processing line %d...\n" line_number; flush_all ()) else ();
+(*      if line_number mod 10000 = 0 then (eprintf "Processing line %d...\n" line_number; flush_all ()) else ();*)
       try process_command stack cmd
       with
       | e ->
@@ -217,7 +233,10 @@ let read_article filename =
           eprintf "In article %s, at line %d: %s\n" filename line_number cmd;
           raise e in
     loop (line_number + 1) state in
-  try loop 1 [] with End_of_file -> ();
-  close_in file
+  try loop 1 []
+  with Done(line_number) ->
+    flush_all ();
+    eprintf "Done! Processed %d lines.\n" line_number;
+    close_in file
 
 
