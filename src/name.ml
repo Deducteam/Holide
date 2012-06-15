@@ -76,11 +76,9 @@ let export_name prefix name =
 let export_var (idx, a) =
   (* Term variables can have the same name but different types, so we suffix
      the hash of the type to avoid clashes. *)
-  let name = idx ^ (hex_of_int (Hashtbl.hash a mod 256)) in
+  let name = idx ^ "_" ^ hex_of_int (Hashtbl.hash a mod 256) in
   export_name var_prefix name
 
-(* Filter logical connectives because Dedukti only accepts alpha-numerical
-   characters. *)
 let export_cst c = export_name cst_prefix c
 
 let export_tyvar a = export_name tyvar_prefix a

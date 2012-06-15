@@ -123,9 +123,9 @@ let process_name stack cmd =
     | ["Data"; "Bool"], "!" -> "forall"
     | ["Data"; "Bool"], "?" -> "exists"
     | ["Data"; "Bool"], "?!" -> "exists_unique"
-    | ["Relation"], "universe" -> "Relation_universe"
-(*    | _ :: _, _ -> (escape (List.nth sl (List.length sl - 1))) ^ "_" ^ (escape s)*)
-    | _ -> escape s in
+    | ["Data"; c], _ -> escape c ^ "_" ^ escape s
+    | ["Number"; c], _ -> escape c ^ "_" ^ escape s
+    | _ -> List.fold_right (fun component name -> escape component ^ "_" ^ name) sl (escape s) in
   OName(name) :: stack
 
 let process_command stack cmd =
