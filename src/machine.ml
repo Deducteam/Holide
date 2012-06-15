@@ -85,7 +85,6 @@ let process_num stack cmd =
 
 (* Escape non-alphanumerical characters. *)
 let escape name =
-  let hex = "0123456789abcdef" in
   let s = String.create 256 in
   let j = ref 0 in
   for i = 0 to String.length name - 1 do
@@ -96,7 +95,8 @@ let escape name =
         (Char.code 'a' <= code && code <= Char.code 'z') ||
         (Char.code 'A' <= code && code <= Char.code 'Z')
       then (s.[!j] <- c; j := !j + 1) else
-    (s.[!j] <- '_'; s.[!j + 1] <- hex.[code / 16]; s.[!j + 2] <- hex.[code mod 16]; j := !j + 3) done;
+    let h = Name.hex_of_int code in
+    (s.[!j] <- '_'; s.[!j + 1] <- h.[0]; s.[!j + 2] <- h.[1]; j := !j + 3) done;
   String.sub s 0 !j
 
 (* Extract the name from the cmd string. *)
@@ -123,7 +123,8 @@ let process_name stack cmd =
     | ["Data"; "Bool"], "!" -> "forall"
     | ["Data"; "Bool"], "?" -> "exists"
     | ["Data"; "Bool"], "?!" -> "exists_unique"
-    | _ :: _, _ -> (escape (List.nth sl (List.length sl - 1))) ^ "_" ^ (escape s)
+    | ["Relation"], "universe" -> "Relation_universe"
+(*    | _ :: _, _ -> (escape (List.nth sl (List.length sl - 1))) ^ "_" ^ (escape s)*)
     | _ -> escape s in
   OName(name) :: stack
 
@@ -206,6 +207,7 @@ let process_command stack cmd =
       let sigma = List.map extract_term_subst sigma in
       OThm(step cmd (substThm theta sigma thm)) :: stack
   | "thm", OTerm(p) :: OList(qs) :: OThm(thm) :: stack ->
+      eprintf "Stating theorem..."; prerr_newline ();
       print_thm (Name.fresh_thm ()) thm;
       stack
   | "typeOp", OName(tyop) :: stack -> OTypeOp(tyop) :: stack

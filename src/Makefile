@@ -28,7 +28,7 @@ $(EXECUTABLE).byte: $(MODULES:%=%.cmo)
 
 # Statistics
 stat: clean
-	wc -l *.ml parser.mly lexer.mll
+	wc -l *.ml
 
 # Clean up
 clean:

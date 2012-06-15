@@ -55,6 +55,13 @@ let starts_with prefix name =
   try String.sub name 0 (String.length prefix) = prefix
   with Invalid_argument _ -> false
 
+let hex_of_int i =
+  let hex = "0123456789abcdef" in
+  let s = String.create 2 in
+  s.[0] <- hex.[i / 16];
+  s.[1] <- hex.[i mod 16];
+  s
+
 let export_name prefix name =
 (*  let name = escape name in*)
   if !mangle_names then prefix ^ name else
@@ -69,7 +76,7 @@ let export_name prefix name =
 let export_var (idx, a) =
   (* Term variables can have the same name but different types, so we suffix
      the hash of the type to avoid clashes. *)
-  let name = idx ^ "_" ^ (string_of_int (Hashtbl.hash a)) in
+  let name = idx ^ (hex_of_int (Hashtbl.hash a mod 256)) in
   export_name var_prefix name
 
 (* Filter logical connectives because Dedukti only accepts alpha-numerical

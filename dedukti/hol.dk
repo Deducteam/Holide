@@ -1,6 +1,6 @@
-;-----------;
-; HOL Types ;
-;-----------;
+(;-----------;)
+(; HOL Types ;)
+(;-----------;)
 
 type : Type.
 
@@ -8,9 +8,9 @@ bool : type.
 ind  : type.
 arr  : type -> type -> type.
 
-;-----------;
-; HOL Terms ;
-;-----------;
+(;-----------;)
+(; HOL Terms ;)
+(;-----------;)
 
 term : type -> Type.
 [a : type, b : type] term (arr a b) --> term a -> term b.
@@ -37,9 +37,9 @@ hforall : a : type -> (term a -> prop) -> prop.
 witness : a : type -> term a.
 [a : type] witness a --> select a (x : term a => htop).
 
-;------------;
-; HOL Proofs ;
-;------------;
+(;------------;)
+(; HOL Proofs ;)
+(;------------;)
 
 proof : prop -> Type.
 [] proof top --> c : prop -> proof c -> proof c.
@@ -48,9 +48,9 @@ proof : prop -> Type.
 [a : type, P : term (arr a bool)] proof (forall a P) --> x : term a -> proof (P x).
 [a : type, x : term a, y : term a] proof (eq a x y) --> c : term (arr a bool) -> proof (imp (c x) (c y)).
 
-;------------------;
-; Type Definitions ;
-;------------------;
+(;------------------;)
+(; Type Definitions ;)
+(;------------------;)
 
 typedef : a : type -> p : (term a -> term bool) -> t : term a -> type.
 
@@ -58,9 +58,9 @@ abs  : a : type -> p : (term a -> term bool) -> t : term a -> term (arr a (typed
 rep  : a : type -> p : (term a -> term bool) -> t : term a -> term (arr (typedef a p t) a).
 [a : type, p : term a -> term bool, t : term a, y : term (typedef a p t)] abs a p t (rep a p t y) --> y.
 
-;--------;
-; Axioms ;
-;--------;
+(;--------;)
+(; Axioms ;)
+(;--------;)
 
 FUN_EXT : a : type -> b : type -> p : (term a -> term b) -> q : (term a -> term b) ->
   (x : term a -> proof (eq b (p x) (q x))) -> proof (eq (arr a b) p q).
@@ -72,11 +72,11 @@ REP_ABS : a : type -> p : (term a -> term bool) -> t : term a -> H : proof (p t)
 
 SELECT_AX : a : type -> P : (term a -> term bool) -> x : term a -> proof (P x) -> proof (P (select a P)).
 
-; INFINITY_AX : ...
+(; INFINITY_AX : ... ;)
 
-;-----------------;
-; Derivable rules ;
-;-----------------;
+(;-----------------;)
+(; Derivable rules ;)
+(;-----------------;)
 
 REFL : a : type -> t : term a -> proof (eq a t t).
 [a : type, t : term a] REFL a t -->
