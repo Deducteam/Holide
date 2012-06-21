@@ -75,8 +75,10 @@ let export_name prefix name =
 
 let export_var (idx, a) =
   (* Term variables can have the same name but different types, so we suffix
-     the hash of the type to avoid clashes. *)
-  let name = idx ^ "_" ^ hex_of_int (Hashtbl.hash a mod 256) in
+     the hash of the type to avoid clashes. Use hashparam to avoid collisions
+     (which would otherwise happen often). *)
+  let hash = hex_of_int (Hashtbl.hash_param 1000000 1000000 a mod 256) in
+  let name = idx ^ "_" ^ hash in
   export_name var_prefix name
 
 let export_cst c = export_name cst_prefix c
