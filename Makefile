@@ -25,7 +25,7 @@ $(EXECUTABLE).byte: $(MODULES:%=src/%.cmo)
 	$(OCAMLOPT) $(OFLAGS) -I src -c $*.ml
 
 # Dependencies
-.depend:
+.depend: $(MODULES:%=src/%.ml)
 	ocamldep -I src src/*.ml src/*.mli > .depend
 
 # Statistics
@@ -54,7 +54,18 @@ PACKAGES = \
   natural-exp-def natural-exp-thm \
   natural-div-def natural-div-thm \
   natural-factorial-def natural-factorial-thm \
-#  natural-funpow-def natural-funpow-thm # Does not exist! :S
+  set-def set-thm \
+  set-finite-def set-finite-thm \
+  set-fold-def set-fold-thm \
+  set-size-def set-size-thm \
+  option-def option-thm \
+  option-dest-def option-dest-thm \
+  real-def real-thm \
+  relation-def relation-thm \
+  relation-well-founded-def relation-well-founded-thm \
+  relation-natural-def relation-natural-thm \
+  sum-def \
+#  natural-funpow-def natural-funpow-thm Does not exist! :S
 
 OPENTHEORY = opentheory
 
