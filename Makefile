@@ -37,4 +37,36 @@ clean:
 	rm -f $(EXECUTABLE) $(EXECUTABLE).byte
 	rm -f src/*.cm[iox] src/*.o
 
+# Exporting opentheory packages (needs opentheory)
+PACKAGES = \
+  axiom-extensionality axiom-choice axiom-infinity \
+  unit-def unit-thm \
+  bool-def bool-int bool-ext bool-class \
+  pair-def pair-thm \
+  function-def function-thm \
+  natural-def natural-thm natural-numeral natural-dest \
+  natural-order-def natural-order-thm \
+  natural-order-min-max-def natural-order-min-max-thm \
+  natural-add-def natural-add-thm \
+  natural-mult-def natural-mult-thm \
+  natural-sub-def natural-sub-thm \
+  natural-distance-def natural-distance-thm \
+  natural-exp-def natural-exp-thm \
+  natural-div-def natural-div-thm \
+  natural-factorial-def natural-factorial-thm \
+#  natural-funpow-def natural-funpow-thm # Does not exist! :S
+
+OPENTHEORY = opentheory
+
+# Prevent stupid make from deleting intermediary files.
+.SECONDARY: 
+
+packages: $(PACKAGES:%=dedukti/atomic/%.dk)
+
+dedukti/atomic/%.dk: $(EXECUTABLE) opentheory/atomic/%.art
+	./$(EXECUTABLE) --steps opentheory/atomic/$*.art -o dedukti/atomic/$*.dk 
+
+opentheory/atomic/%.art:
+	$(OPENTHEORY) info --article $* > opentheory/atomic/$*.art
+
 include .depend
