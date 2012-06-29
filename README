@@ -1,0 +1,51 @@
+                                 ===========
+                                 H O L I D E
+                                 ===========
+
+Holide is an HOL to Dedukti translator. It accepts files in the OpenTheory
+standard proof format and produces files for the Dedukti proof backend.
+
+The source code is available online at:
+https://scm.gforge.inria.fr/svn/acs/trunk/holide/
+
+You need OCaml to compile it. It was tested with OCaml 3.12.0, but previous
+versions should work just as well. To compile, simply run 'make' in the main
+directory. It will produce an executable named 'holide'.
+
+Usage: ./holide <options> <file>
+  --dict    Use opentheory dictionary compression
+  --mangle  Activate name mangling for variable names
+  -o <file> Set output filename
+  --steps   Output intermediary derivation steps
+  -help     Display this list of options
+  --help    Display this list of options
+
+It is strongly recommended to use the --steps option to produce files of
+manageable size. It greatly reduces the size of the output. If you don't want
+to use this option, at least use --dict to make use the OpenTheory dictionary
+sharing.
+
+Example:
+
+  ./holide --steps dedukti opentheory/bool.art -o dedukti/bool.dk
+
+This produces a file named 'dedukti/bool.dk' which is an encoding of the theory
+of the file 'opentheory/bool.art'. All generated files depend on the main HOL
+logic, which is formalized in the file 'dedukti/hol.dk'
+
+There are many ways to obtain proofs in the OpenTheory format. This
+distribution comes with the standard library of OpenTheory, in the
+'opentheory' directory. You can batch translate these files using the commands
+'make base', 'make packages', and 'make atomic'.
+
+For more information on OpenTheory, visit:
+http://www.gilith.com/research/opentheory/
+http://opentheory.gilith.com/
+
+For more information on Dedukti, visit:
+http://www.lix.polytechnique.fr/dedukti/
+
+For feedback or bug reports, please send an email to:
+ali.assaf@inria.fr
+guillaume.burel@ensiie.fr
+

@@ -24,6 +24,13 @@ let rec context_remove gamma p =
 
 (* Deduction rules *)
 
+let axiom gamma p =
+  Printf.eprintf "Assuming axiom..."; prerr_newline ();
+  let statement = close_gen gamma p (export_prop p) in
+  let name = Name.fresh_axm () in
+  output_declaration name statement;
+  Thm(gamma, p, open_abstract gamma p (PVar(name)))
+
 let absThm x thmtu =
   let Thm(gamma, tu, htu) = thmtu in
   let t, u = try get_eq tu with Failure s -> failwith ("absThm" ^ s) in
@@ -139,6 +146,8 @@ let defineConst cname t =
         (t', PApp(PApp(PVar("hol.REFL"), a'), c')) in
   output_definition (Name.export_cst cname) a' def;
   Thm([], eq c t, proof)
+(*  output_declaration (Name.export_cst cname) a';*)
+(*  axiom [] (eq c t)*)
 
 let defineTypeOp opname absname repname type_vars thmpt =
   let Thm(gamma, pt, hpt) = thmpt in
@@ -174,13 +183,6 @@ let defineTypeOp opname absname repname type_vars thmpt =
     PApp(PApp(PApp(PApp(PApp(PVar("hol.REP_ABS"), xtype'), p'), t'), hpt), x')),
   Thm([], eq (App(abs, App(rep, y))) y,
     PApp(PApp(PVar("hol.REFL"), ytype'), y')))
-
-let axiom gamma p =
-  Printf.eprintf "Assuming axiom..."; prerr_newline ();
-  let statement = close_gen gamma p (export_prop p) in
-  let name = Name.fresh_axm () in
-  output_declaration name statement;
-  Thm(gamma, p, open_abstract gamma p (PVar(name)))
 
 (* Abstract over the free hypotheses, the free variables, and the free type
    variables in the theorem to obtain a well-typed "standalone" proof term. *)

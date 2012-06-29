@@ -46,7 +46,7 @@ proof : prop -> Type.
 [p : prop, q : prop] proof (and p q) --> c : prop -> (proof p -> proof q -> proof c) -> proof c.
 [p : prop, q : prop] proof (imp p q) --> proof p -> proof q.
 [a : type, P : term (arr a bool)] proof (forall a P) --> x : term a -> proof (P x).
-[a : type, x : term a, y : term a] proof (eq a x y) --> c : term (arr a bool) -> proof (imp (c x) (c y)).
+[a : type, x : term a, y : term a] proof (eq a x y) --> c : term (arr a bool) -> proof (c x) -> proof (c y).
 
 (;------------------;)
 (; Type Definitions ;)
