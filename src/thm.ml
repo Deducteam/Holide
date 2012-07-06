@@ -163,7 +163,6 @@ let defineTypeOp opname absname repname type_vars thmpt =
   let y = Var("a", ytype) in
   let kind = List.fold_right gen_tvar type_vars (PVar("hol.type")) in
   let xtype' = export_raw_type xtype in
-  let ytype' = export_raw_type ytype in
   let x' = export_term x in
   let y' = export_term y in
   let p' = export_term p in
@@ -171,18 +170,18 @@ let defineTypeOp opname absname repname type_vars thmpt =
   let fv = free_vars t [] in
   let t' = elim_free_vars fv t' in
   let hpt = elim_free_vars fv hpt in
-  let typedef = List.fold_right abstract_tvar type_vars (PApp(PApp(PApp(PVar("hol.typedef"), xtype'), p'), t')) in
+  let typedef = List.fold_right abstract_tvar type_vars (PApp(PApp(PVar("hol.typedef"), xtype'), p')) in
   output_definition (Name.export_tyop opname) kind typedef;
   let type_abs' = List.fold_right gen_tvar type_vars (export_type (ty_arr xtype ytype)) in
-  let def_abs' = List.fold_right abstract_tvar type_vars (PApp(PApp(PApp(PVar("hol.abs"), xtype'), p'), t')) in
+  let def_abs' = List.fold_right abstract_tvar type_vars (PApp(PApp(PVar("hol.abs"), xtype'), p')) in
   output_definition (Name.export_cst absname) type_abs' def_abs';
   let type_rep' = List.fold_right gen_tvar type_vars (export_type (ty_arr ytype xtype)) in
-  let def_rep' = List.fold_right abstract_tvar type_vars (PApp(PApp(PApp(PVar("hol.rep"), xtype'), p'), t')) in
+  let def_rep' = List.fold_right abstract_tvar type_vars (PApp(PApp(PVar("hol.rep"), xtype'), p')) in
   output_definition (Name.export_cst repname) type_rep' def_rep';
   (Thm([], eq (App(p, x)) (eq (App(rep, App(abs, x))) x),
     PApp(PApp(PApp(PApp(PApp(PVar("hol.REP_ABS"), xtype'), p'), t'), hpt), x')),
   Thm([], eq (App(abs, App(rep, y))) y,
-    PApp(PApp(PVar("hol.REFL"), ytype'), y')))
+    PApp(PApp(PApp(PVar("hol.ABS_REP"), xtype'), p'), y')))
 
 (* Abstract over the free hypotheses, the free variables, and the free type
    variables in the theorem to obtain a well-typed "standalone" proof term. *)

@@ -33,17 +33,17 @@ This produces a file named 'dedukti/bool.dk' which is an encoding of the theory
 of the file 'opentheory/bool.art'. All generated files depend on the main HOL
 logic, which is formalized in the file 'dedukti/hol.dk'
 
-There are many ways to obtain proofs in the OpenTheory format. This
-distribution comes with the standard library of OpenTheory, in the
-'opentheory' directory. You can batch translate these files using the commands
-'make base', 'make packages', and 'make atomic'.
+There are many ways to obtain proofs in the OpenTheory format. If you have
+the opentheory tool installed, you can automatically export and translate the
+theories of the OpenTheory standard library using the commands 'make base',
+'make packages', and 'make atomic'.
 
 For more information on OpenTheory, visit:
 http://www.gilith.com/research/opentheory/
 http://opentheory.gilith.com/
 
 For more information on Dedukti, visit:
-http://www.lix.polytechnique.fr/dedukti/
+https://www.rocq.inria.fr/deducteam/Dedukti/
 
 For feedback or bug reports, please send an email to:
 ali.assaf@inria.fr
