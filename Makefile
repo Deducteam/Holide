@@ -1,41 +1,25 @@
-EXECUTABLE = holide
-MODULES    = name type term proof output thm machine main
-LIBRARIES  = str
+NAME = holide
 
-# Tools
-OCAMLC   = ocamlc
-OCAMLOPT = ocamlopt
-OCAMLDEP = ocamldep
+OCAMLBUILD = ocamlbuild
+OPTIONS    = -classic-display
+LIBS       = str
 
-# Options
-BFLAGS =
-OFLAGS =
+.PHONY: native byte clean stat
 
-$(EXECUTABLE): $(MODULES:%=src/%.cmx)
-	$(OCAMLOPT) $(OFLAGS) -o $(EXECUTABLE) $(LIBRARIES:%=%.cmxa) $(MODULES:%=src/%.cmx)
+native:
+	$(OCAMLBUILD) $(OPTIONS) -libs $(LIBS) -I src main.native
+	mv main.native $(NAME)
 
-$(EXECUTABLE).byte: $(MODULES:%=src/%.cmo)
-	$(OCAMLC) $(BFLAGS) -o $(EXECUTABLE).byte $(LIBRARIES:%=%.cma) $(MODULES:%=src/%.cmo)
+byte:
+	$(OCAMLBUILD) $(OPTIONS) -libs $(LIBS) -I src main.byte
+	mv main.byte $(NAME)
 
-%.cmo: %.ml
-	$(OCAMLC) $(BFLAGS) -I src -c $*.ml
-%.cmi: %.mli
-	$(OCAMLC) $(BFLAGS) -I src -c $*.mli
-%.cmx: %.ml
-	$(OCAMLOPT) $(OFLAGS) -I src -c $*.ml
-
-# Dependencies
-.depend: $(MODULES:%=src/%.ml)
-	ocamldep -I src src/*.ml src/*.mli > .depend
+clean:
+	$(OCAMLBUILD) $(OPTIONS) -clean
 
 # Statistics
 stat: clean
-	wc -l src/*.ml
-
-# Clean up
-clean:
-	rm -f $(EXECUTABLE) $(EXECUTABLE).byte
-	rm -f src/*.cm[iox] src/*.o
+	wc -l src/*.ml src/*.mly src/*.mll
 
 # OpenTheory standard packages (optional)
 # (needs the opentheory tool if you don't have the article files)
@@ -120,4 +104,3 @@ opentheory/%.art:
 opentheory/atomic/%.art:
 	$(OPENTHEORY) info --article $* > opentheory/atomic/$*.art
 
-include .depend
