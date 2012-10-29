@@ -11,7 +11,7 @@ let options = Arg.align [
   "--steps", Arg.Set(Machine.use_step), " Output intermediary derivation steps"]
 
 let usage =
-  Printf.sprintf "Usage: %s <options> <file>" Sys.argv.(0)
+  Printf.sprintf "Usage: %s <options> <file>\n" Sys.argv.(0)
 
 let () =
   Arg.parse options set_filename usage;
