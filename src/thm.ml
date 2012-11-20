@@ -189,5 +189,5 @@ let print_thm name theorem =
   let Thm(gamma, p, proof) = theorem in
   let statement = close_gen gamma p (export_prop p) in
   let proof = close_abstract gamma p proof in
-  output_definition name statement proof
+  output_opaque_definition name statement proof
 

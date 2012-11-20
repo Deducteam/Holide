@@ -19,7 +19,7 @@ clean:
 
 # Statistics
 stat: clean
-	wc -l src/*.ml src/*.mly src/*.mll
+	wc -l src/*.ml
 
 # OpenTheory standard packages (optional)
 # (needs the opentheory tool if you don't have the article files)

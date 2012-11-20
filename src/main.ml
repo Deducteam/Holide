@@ -7,6 +7,7 @@ let set_filename name =
 let options = Arg.align [
   "--dict", Arg.Set(Machine.use_dict), " Use opentheory dictionary compression";
   "--mangle", Arg.Set(Name.mangle_names), " Activate name mangling for variable names";
+  "--old-def", Arg.Clear(Output.new_def_syntax), " Do not use the new definition syntax";
   "-o", Arg.String(Output.set_out_channel), "<file> Set output filename";
   "--steps", Arg.Set(Machine.use_step), " Output intermediary derivation steps"]
 
