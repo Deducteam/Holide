@@ -71,7 +71,7 @@ let export_name prefix name =
      starts_with thm_prefix name ||
      starts_with axm_prefix name ||
      starts_with dict_prefix name     
-  then name ^ "'" else name
+  then name ^ "_" else name
 
 let export_var (idx, a) =
   (* Term variables can have the same name but different types, so we suffix

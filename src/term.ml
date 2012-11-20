@@ -56,7 +56,7 @@ let rec free_tvars t ftv =
    variables avoid. *)
 let rec variant x avoid =
   if not (List.mem x avoid) then x else
-  let (idx, a) = x in variant (idx ^ "'", a) avoid
+  let (idx, a) = x in variant (idx ^ "_", a) avoid
 
 (* Capture-avoiding parallel substitution. Returns the result of applying the
    parallel substitution s to the term t. The parallel substitution must be
