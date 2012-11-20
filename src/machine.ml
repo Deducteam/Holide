@@ -25,7 +25,7 @@ let use_dict = ref false
 
 (* Fully factorize proof into elementary steps. Will create intermediary steps
    named step_<number> for every application of a deduction rule. *)
-let use_step = ref false
+let use_step = ref true
 
 let create_step name thm =
   let Thm(gamma, p, proof) = thm in

@@ -9,7 +9,7 @@ let options = Arg.align [
   "--mangle", Arg.Set(Name.mangle_names), " Activate name mangling for variable names";
   "--old-def", Arg.Clear(Output.new_def_syntax), " Do not use the new definition syntax";
   "-o", Arg.String(Output.set_out_channel), "<file> Set output filename";
-  "--steps", Arg.Set(Machine.use_step), " Output intermediary derivation steps"]
+  "--no-steps", Arg.Clear(Machine.use_step), " Do not output intermediary derivation steps"]
 
 let usage =
   Printf.sprintf "Usage: %s <options> <file>\n" Sys.argv.(0)
