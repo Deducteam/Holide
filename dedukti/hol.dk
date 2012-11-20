@@ -42,10 +42,10 @@ witness : a : type -> term a.
 (;------------;)
 
 proof : prop -> Type.
-[] proof top --> c : prop -> proof c -> proof c.
-[p : prop, q : prop] proof (and p q) --> c : prop -> (proof p -> proof q -> proof c) -> proof c.
-[p : prop, q : prop] proof (imp p q) --> proof p -> proof q.
-[a : type, P : term (arr a bool)] proof (forall a P) --> x : term a -> proof (P x).
+[] proof top --> c : prop -> proof c -> proof c
+[p : prop, q : prop] proof (and p q) --> c : prop -> (proof p -> proof q -> proof c) -> proof c
+[p : prop, q : prop] proof (imp p q) --> proof p -> proof q
+[a : type, P : term (arr a bool)] proof (forall a P) --> x : term a -> proof (P x)
 [a : type, x : term a, y : term a] proof (eq a x y) --> c : term (arr a bool) -> proof (c x) -> proof (c y).
 
 (;------------------;)
@@ -56,7 +56,7 @@ typedef : a : type -> p : (term a -> term bool) -> type.
 
 abs  : a : type -> p : (term a -> term bool) -> term (arr a (typedef a p)).
 rep  : a : type -> p : (term a -> term bool) -> term (arr (typedef a p) a).
-[a : type, p : term a -> term bool, y : term (typedef a p)] abs a p (rep a p y) --> y.
+[a : type, p : term a -> term bool, y : term (typedef a p)] abs {a} {p} (rep a p y) --> y.
 
 (;--------;)
 (; Axioms ;)
