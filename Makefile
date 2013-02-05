@@ -93,10 +93,10 @@ packages: $(PACKAGES:%=dedukti/%.dk)
 atomic: $(ATOMIC:%=dedukti/atomic/%.dk)
 
 dedukti/%.dk: $(EXECUTABLE) opentheory/%.art
-	./$(EXECUTABLE) --steps opentheory/$*.art -o dedukti/$*.dk 
+	./$(NAME) opentheory/$*.art -o dedukti/$*.dk 
 
 dedukti/atomic/%.dk: $(EXECUTABLE) opentheory/atomic/%.art
-	./$(EXECUTABLE) --steps opentheory/atomic/$*.art -o dedukti/atomic/$*.dk 
+	./$(NAME) opentheory/atomic/$*.art -o dedukti/atomic/$*.dk 
 
 opentheory/%.art:
 	$(OPENTHEORY) info --article $* > opentheory/$*.art

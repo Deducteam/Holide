@@ -19,7 +19,7 @@ let output_comment comment = fprintf !out_formatter "(; %s ;)@." comment
 let output_definition name ty body =
   if !new_def_syntax
   then
-    fprintf !out_formatter "%s: %a := %a@." name fprintf_pterm ty fprintf_pterm body
+    fprintf !out_formatter "%s: %a := %a.@.@." name fprintf_pterm ty fprintf_pterm body
   else (
     fprintf !out_formatter "%s: %a.@." name fprintf_pterm ty;
     fprintf !out_formatter "[] %s --> %a.@.@." name fprintf_pterm body)
@@ -27,7 +27,7 @@ let output_definition name ty body =
 let output_opaque_definition name ty body =
   if !new_def_syntax
   then
-    fprintf !out_formatter "{%s}: %a := %a@." name fprintf_pterm ty fprintf_pterm body
+    fprintf !out_formatter "{%s}: %a := %a.@.@." name fprintf_pterm ty fprintf_pterm body
   else (
     fprintf !out_formatter "%s: %a.@." name fprintf_pterm ty;
     fprintf !out_formatter "[] %s --> %a.@.@." name fprintf_pterm body)

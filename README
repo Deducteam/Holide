@@ -13,21 +13,22 @@ versions should work just as well. To compile, simply run 'make' in the main
 directory. It will produce an executable named 'holide'.
 
 Usage: ./holide <options> <file>
-  --dict    Use opentheory dictionary compression
-  --mangle  Activate name mangling for variable names
-  -o <file> Set output filename
-  --steps   Output intermediary derivation steps
-  -help     Display this list of options
-  --help    Display this list of options
+  --dict      Use opentheory dictionary compression
+  --mangle    Activate name mangling for variable names
+  --old-def   Do not use the new definition syntax
+  -o <file>   Set output filename
+  --no-steps  Do not output intermediary derivation steps
+  -help       Display this list of options
+  --help      Display this list of options
 
-It is strongly recommended to use the --steps option to produce files of
+It is strongly recommended to use the steps optimization to produce files of
 manageable size. It greatly reduces the size of the output. If you don't want
 to use this option, at least use --dict to make use the OpenTheory dictionary
 sharing.
 
 Example:
 
-  ./holide --steps dedukti opentheory/bool.art -o dedukti/bool.dk
+  ./holide dedukti opentheory/bool.art -o dedukti/bool.dk
 
 This produces a file named 'dedukti/bool.dk' which is an encoding of the theory
 of the file 'opentheory/bool.art'. All generated files depend on the main HOL
