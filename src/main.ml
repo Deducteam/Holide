@@ -21,6 +21,6 @@ let () =
       Arg.usage options usage;
       exit 1
   | Some filename ->
-      Output.output_preamble ();
+      Output.output_preamble (Filename.chop_extension (Filename.basename filename));
       Machine.read_article filename
 

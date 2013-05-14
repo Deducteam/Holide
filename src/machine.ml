@@ -29,13 +29,13 @@ let use_step = ref true
 
 let create_step name thm =
   let Thm(gamma, p, proof) = thm in
-  print_thm name thm;
+  print_step name thm;
   let proof = open_abstract gamma p (PVar(name)) in
   Thm(gamma, p, proof)
 
 let step cmd thm =
-  if not !use_step then thm else
-  begin Output.output_comment cmd;
+  if not !use_step then thm else begin
+  Output.output_comment cmd;
   create_step (Name.fresh_step ()) thm end
 
 let dict_add k obj =
@@ -205,7 +205,8 @@ let process_command stack cmd =
         | _ -> failwith "not a term substitution" in
       let theta = List.map extract_type_subst theta in
       let sigma = List.map extract_term_subst sigma in
-      OThm(step cmd (substThm theta sigma thm)) :: stack
+(*      OThm(step cmd (substThm theta sigma thm)) :: stack*)
+      OThm(substThm theta sigma thm) :: stack
   | "thm", OTerm(p) :: OList(qs) :: OThm(thm) :: stack ->
       eprintf "Stating theorem..."; prerr_newline ();
       print_thm (Name.fresh_thm ()) thm;

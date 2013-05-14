@@ -26,16 +26,33 @@ let output_definition name ty body =
 
 let output_opaque_definition name ty body =
   if !new_def_syntax
-  then
-    fprintf !out_formatter "{%s}: %a := %a.@.@." name fprintf_pterm ty fprintf_pterm body
+  then (
+    fprintf !out_formatter "{%s}: %a := %a.@.@." name fprintf_pterm ty fprintf_pterm body)
+(*    fprintf !out_formatter "%s: %a.@." name fprintf_pterm ty;*)
+(*    fprintf !out_formatter "_: %a := %a.@.@." fprintf_pterm ty fprintf_pterm body)*)
   else (
     fprintf !out_formatter "%s: %a.@." name fprintf_pterm ty;
     fprintf !out_formatter "[] %s --> %a.@.@." name fprintf_pterm body)
 
+let output_let name body =
+  if !new_def_syntax
+  then
+    fprintf !out_formatter "%s := %a.@.@." name fprintf_pterm body
+  else (failwith "requires new_def_syntax")
+
+let output_opaque_let name body =
+  if !new_def_syntax
+  then (
+    fprintf !out_formatter "{%s} := %a.@.@." name fprintf_pterm body)
+  else (failwith "requires new_def_syntax")
+
 let output_declaration name ty =
   fprintf !out_formatter "%s: %a.@.@." name fprintf_pterm ty
 
-let output_preamble () = fprintf !out_formatter "
+let output_preamble name = fprintf !out_formatter "
+#NAME foo
+#IMPORT hol
+
 (;--------------------------- BEGIN HOL SIGNATURE ----------------------------;)
 type : Type.
 [] type --> hol.type.

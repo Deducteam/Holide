@@ -128,26 +128,26 @@ let defineConst cname t =
   let a' = List.fold_right gen_tvar ty_vars (export_type a) in
   let args = List.map (fun x -> TyVar(x)) ty_vars in
   let c = Cst(cname, args) in
-  (* Short-circuit the definitions. *)
-  let def, proof =
-    match cname with
-    | "imp" ->
-        (PVar("hol.imp"), PVar("hol.EQUIV_IMP_HIMP"))
-    | "forall" ->
-        (PVar("hol.forall"), PApp(PVar("hol.EQUIV_FORALL_HFORALL"), PVar(Name.export_tyvar "A")))
-    | "top" ->
-        (PVar("hol.top"), PVar("hol.EQUIV_TOP_HTOP"))
-    | "and" ->
-        (PVar("hol.and"), PVar("hol.EQUIV_AND_HAND"))
-    | _ ->
-        let a' = export_raw_type a in
-        let c' = export_term (c) in
-        let t' = List.fold_right abstract_tvar ty_vars (export_term t) in
-        (t', PApp(PApp(PVar("hol.REFL"), a'), c')) in
-  output_definition (Name.export_cst cname) a' def;
-  Thm([], eq c t, proof)
-(*  output_declaration (Name.export_cst cname) a';*)
-(*  axiom [] (eq c t)*)
+(*  (* Short-circuit the definitions. *)*)
+(*  let def, proof =*)
+(*    match cname with*)
+(*    | "imp" ->*)
+(*        (PVar("hol.imp"), PVar("hol.EQUIV_IMP_HIMP"))*)
+(*    | "forall" ->*)
+(*        (PVar("hol.forall"), PApp(PVar("hol.EQUIV_FORALL_HFORALL"), PVar(Name.export_tyvar "A")))*)
+(*    | "top" ->*)
+(*        (PVar("hol.top"), PVar("hol.EQUIV_TOP_HTOP"))*)
+(*    | "and" ->*)
+(*        (PVar("hol.and"), PVar("hol.EQUIV_AND_HAND"))*)
+(*    | _ ->*)
+(*        let a' = export_raw_type a in*)
+(*        let c' = export_term (c) in*)
+(*        let t' = List.fold_right abstract_tvar ty_vars (export_term t) in*)
+(*        (t', PApp(PApp(PVar("hol.REFL"), a'), c')) in*)
+(*  output_definition (Name.export_cst cname) a' def;*)
+(*  Thm([], eq c t, proof)*)
+  output_declaration (Name.export_cst cname) a';
+  axiom [] (eq c t)
 
 let defineTypeOp opname absname repname type_vars thmpt =
   let Thm(gamma, pt, hpt) = thmpt in
@@ -191,3 +191,9 @@ let print_thm name theorem =
   let proof = close_abstract gamma p proof in
   output_opaque_definition name statement proof
 
+let print_step name theorem =
+  let Thm(gamma, p, proof) = theorem in
+  let statement = close_gen gamma p (export_prop p) in
+  let proof = close_abstract gamma p proof in
+  output_opaque_definition name statement proof
+(*  output_opaque_let name proof*)
