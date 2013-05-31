@@ -1,3 +1,5 @@
+SHELL = bash
+
 NAME = holide
 
 OCAMLBUILD = ocamlbuild
@@ -86,21 +88,27 @@ ATOMIC = \
 # Prevent stupid make from deleting intermediary files.
 .SECONDARY: 
 
+opentheory: $(PACKAGES:%=opentheory/%.art)
+
+opentheory_atomic: $(ATOMIC:%=opentheory/atomic/%.art)
+
+dedukti: $(PACKAGES:%=dedukti/%.dk)
+
+dedukti_atomic: $(ATOMIC:%=dedukti/atomic/%.dk)
+
 base: dedukti/base.dk
 
-packages: $(PACKAGES:%=dedukti/%.dk)
-
-atomic: $(ATOMIC:%=dedukti/atomic/%.dk)
-
-dedukti/%.dk: $(EXECUTABLE) opentheory/%.art
-	./$(NAME) opentheory/$*.art -o dedukti/$*.dk 
-
-dedukti/atomic/%.dk: $(EXECUTABLE) opentheory/atomic/%.art
+dedukti/atomic/%.dk: $(EXECUTABLE) opentheory/atomic/%.art holide
 	./$(NAME) opentheory/atomic/$*.art -o dedukti/atomic/$*.dk 
 
-opentheory/%.art:
-	$(OPENTHEORY) info --article $* > opentheory/$*.art
+dedukti/%.dk: $(EXECUTABLE) opentheory/%.art holide
+	./$(NAME) opentheory/$*.art -o dedukti/$*.dk 
 
 opentheory/atomic/%.art:
+	$(OPENTHEORY) install $*
 	$(OPENTHEORY) info --article $* > opentheory/atomic/$*.art
+
+opentheory/%.art:
+	$(OPENTHEORY) install $*
+	$(OPENTHEORY) info --article $* > opentheory/$*.art
 
