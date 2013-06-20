@@ -1,0 +1,5 @@
+holide
+_build
+dedukti/*.dk
+opentheory/*.art
+!dedukti/hol.dk
