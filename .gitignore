@@ -1,5 +1,7 @@
 holide
 _build
-dedukti/*.dk
-opentheory/*.art
+dedukti/*
+opentheory/*
+twelf/*
 !dedukti/hol.dk
+!twelf/hol.elf
