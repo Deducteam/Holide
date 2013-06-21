@@ -22,6 +22,21 @@ let rec context_union gamma delta =
 let rec context_remove gamma p =
   List.filter (fun q -> not (alpha_equiv p q)) gamma
 
+(* Abstract over the free hypotheses, the free variables, and the free type
+   variables in the theorem to obtain a well-typed "standalone" proof term. *)
+let print_thm name theorem =
+  let Thm(gamma, p, proof) = theorem in
+  let statement = close_gen gamma p (export_prop p) in
+  let proof = close_abstract gamma p proof in
+  output_opaque_definition name statement proof
+
+let print_step name theorem =
+  let Thm(gamma, p, proof) = theorem in
+  let statement = close_gen gamma p (export_prop p) in
+  let proof = close_abstract gamma p proof in
+  output_opaque_definition name statement proof
+(*  output_opaque_let name proof*)
+
 (* Deduction rules *)
 
 let axiom gamma p =
@@ -162,38 +177,30 @@ let defineTypeOp opname absname repname type_vars thmpt =
   let x = Var("r", xtype) in
   let y = Var("a", ytype) in
   let kind = List.fold_right gen_tvar type_vars (PVar("hol.type")) in
-  let xtype' = export_raw_type xtype in
-  let x' = export_term x in
-  let y' = export_term y in
-  let p' = export_term p in
-  let t' = export_term t in
-  let fv = free_vars t [] in
-  let t' = elim_free_vars fv t' in
-  let hpt = elim_free_vars fv hpt in
-  let typedef = List.fold_right abstract_tvar type_vars (PApp(PApp(PVar("hol.typedef"), xtype'), p')) in
-  output_definition (Name.export_tyop opname) kind typedef;
+(*  let xtype' = export_raw_type xtype in*)
+(*  let x' = export_term x in*)
+(*  let y' = export_term y in*)
+(*  let p' = export_term p in*)
+(*  let t' = export_term t in*)
+(*  let fv = free_vars t [] in*)
+(*  let t' = elim_free_vars fv t' in*)
+  print_thm (Name.fresh_thm ()) thmpt;
+(*  let hpt = elim_free_vars fv hpt in*)
+(*  let typedef = List.fold_right abstract_tvar type_vars (PApp(PApp(PVar("hol.typedef"), xtype'), p')) in*)
+(*  output_definition (Name.export_tyop opname) kind typedef;*)
+  output_declaration (Name.export_tyop opname) kind;
   let type_abs' = List.fold_right gen_tvar type_vars (export_type (ty_arr xtype ytype)) in
-  let def_abs' = List.fold_right abstract_tvar type_vars (PApp(PApp(PVar("hol.abs"), xtype'), p')) in
-  output_definition (Name.export_cst absname) type_abs' def_abs';
+(*  let def_abs' = List.fold_right abstract_tvar type_vars (PApp(PApp(PVar("hol.abs"), xtype'), p')) in*)
+(*  output_definition (Name.export_cst absname) type_abs' def_abs';*)
+  output_declaration (Name.export_cst absname) type_abs';
   let type_rep' = List.fold_right gen_tvar type_vars (export_type (ty_arr ytype xtype)) in
-  let def_rep' = List.fold_right abstract_tvar type_vars (PApp(PApp(PVar("hol.rep"), xtype'), p')) in
-  output_definition (Name.export_cst repname) type_rep' def_rep';
-  (Thm([], eq (App(p, x)) (eq (App(rep, App(abs, x))) x),
-    PApp(PApp(PApp(PApp(PApp(PVar("hol.REP_ABS"), xtype'), p'), t'), hpt), x')),
-  Thm([], eq (App(abs, App(rep, y))) y,
-    PApp(PApp(PApp(PVar("hol.ABS_REP"), xtype'), p'), y')))
+(*  let def_rep' = List.fold_right abstract_tvar type_vars (PApp(PApp(PVar("hol.rep"), xtype'), p')) in*)
+(*  output_definition (Name.export_cst repname) type_rep' def_rep';*)
+  output_declaration (Name.export_cst repname) type_rep';
+(*  (Thm([], eq (App(p, x)) (eq (App(rep, App(abs, x))) x),*)
+(*    PApp(PApp(PApp(PApp(PApp(PVar("hol.REP_ABS"), xtype'), p'), t'), hpt), x')),*)
+(*  Thm([], eq (App(abs, App(rep, y))) y,*)
+(*    PApp(PApp(PApp(PVar("hol.ABS_REP"), xtype'), p'), y')))*)
+  (axiom [] (eq (App(p, x)) (eq (App(rep, App(abs, x))) x)),
+   axiom [] (eq (App(abs, App(rep, y))) y))
 
-(* Abstract over the free hypotheses, the free variables, and the free type
-   variables in the theorem to obtain a well-typed "standalone" proof term. *)
-let print_thm name theorem =
-  let Thm(gamma, p, proof) = theorem in
-  let statement = close_gen gamma p (export_prop p) in
-  let proof = close_abstract gamma p proof in
-  output_opaque_definition name statement proof
-
-let print_step name theorem =
-  let Thm(gamma, p, proof) = theorem in
-  let statement = close_gen gamma p (export_prop p) in
-  let proof = close_abstract gamma p proof in
-  output_opaque_definition name statement proof
-(*  output_opaque_let name proof*)
