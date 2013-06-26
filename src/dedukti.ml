@@ -1,3 +1,6 @@
+(** Dedukti terms and pretty-printing functions. *)
+
+(** Grammar of the Dedukti terms. *)
 type term =
 | Type
 | Var of string
@@ -5,6 +8,7 @@ type term =
 | Lam of string * term * term
 | App of term * term
 
+(** Pretty-print the term using the minimal number of parentheses. *)
 let rec print_term out term =
   match term with
   | Pie("", a, b) ->
