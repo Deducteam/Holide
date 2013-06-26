@@ -15,6 +15,9 @@ byte:
 	$(OCAMLBUILD) $(OPTIONS) -libs $(LIBS) -Is $(INCLUDES) main.byte
 	ln -sf build/src/main.native holide
 
+test:
+	$(OCAMLBUILD) $(OPTIONS) -libs $(LIBS) -Is $(INCLUDES) test.byte --
+
 clean:
 	$(OCAMLBUILD) $(OPTIONS) -clean
 	rm -rf holide
