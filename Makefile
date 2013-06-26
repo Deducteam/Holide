@@ -1,31 +1,32 @@
-SHELL = bash
-
-NAME = holide
-
+SHELL      = bash
 OCAMLBUILD = ocamlbuild
-OPTIONS    = -classic-display
+
+OPTIONS    = -classic-display -build-dir build
+INCLUDES   = src
 LIBS       = str
 
 .PHONY: native byte clean stat
 
 native:
-	$(OCAMLBUILD) $(OPTIONS) -libs $(LIBS) -I src main.native
-	mv main.native $(NAME)
+	$(OCAMLBUILD) $(OPTIONS) -libs $(LIBS) -Is $(INCLUDES) main.native
+	ln -sf build/src/main.native holide
 
 byte:
-	$(OCAMLBUILD) $(OPTIONS) -libs $(LIBS) -I src main.byte
-	mv main.byte $(NAME)
+	$(OCAMLBUILD) $(OPTIONS) -libs $(LIBS) -Is $(INCLUDES) main.byte
+	ln -sf build/src/main.native holide
 
 clean:
 	$(OCAMLBUILD) $(OPTIONS) -clean
+	rm -rf holide
 
-# Statistics
-stat: clean
-	wc -l src/*.ml
+stat:
+	wc -l src/*.ml*
 
 # OpenTheory standard packages (optional)
 # (needs the opentheory tool if you don't have the article files)
+
 OPENTHEORY = opentheory
+HOLIDE = holide
 
 PACKAGES = \
   unit \
@@ -96,13 +97,11 @@ dedukti: $(PACKAGES:%=dedukti/%.dk)
 
 dedukti_atomic: $(ATOMIC:%=dedukti/atomic/%.dk)
 
-base: dedukti/base.dk
+dedukti/atomic/%.dk: holide opentheory/atomic/%.art holide
+	$(HOLIDE) opentheory/atomic/$*.art -o dedukti/atomic/$*.dk 
 
-dedukti/atomic/%.dk: $(EXECUTABLE) opentheory/atomic/%.art holide
-	./$(NAME) opentheory/atomic/$*.art -o dedukti/atomic/$*.dk 
-
-dedukti/%.dk: $(EXECUTABLE) opentheory/%.art holide
-	./$(NAME) opentheory/$*.art -o dedukti/$*.dk 
+dedukti/%.dk: holide opentheory/%.art holide
+	$(HOLIDE) opentheory/$*.art -o dedukti/$*.dk 
 
 opentheory/atomic/%.art:
 	$(OPENTHEORY) install $*
