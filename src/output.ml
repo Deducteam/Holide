@@ -33,5 +33,5 @@ let print_declaration x a =
    If [opaque] is set to [true], the definition will be opaque. *)
 let print_definition opaque x a b =
   if opaque
-  then Printf.fprintf !output_channel "%s : %a :=\n %a.\n\n" x Dedukti.print_term a Dedukti.print_term b
-  else Printf.fprintf !output_channel "{%s} : %a :=\n %a.\n\n" x Dedukti.print_term a Dedukti.print_term b
+  then Printf.fprintf !output_channel "{%s} : %a :=\n %a.\n\n" x Dedukti.print_term a Dedukti.print_term b
+  else Printf.fprintf !output_channel "%s : %a :=\n %a.\n\n" x Dedukti.print_term a Dedukti.print_term b
