@@ -1,12 +1,33 @@
 (** Dedukti terms and pretty-printing functions. *)
 
 (** Grammar of the Dedukti terms. *)
+
+type var = string
+
 type term =
 | Type
-| Var of string
-| Pie of string * term * term
-| Lam of string * term * term
+| Var of var
+| Pie of var * term * term
+| Lam of var * term * term
 | App of term * term
+
+let var x = Var(x)
+
+let arr a b = Pie("", a, b)
+
+let pie (x, a) b = Pie(x, a, b)
+
+let lam (x, a) b = Lam(x, a, b)
+
+let app a b = App(a, b)
+
+let arrs args b = List.fold_right arr args b
+
+let pies args b = List.fold_right pie args b
+
+let lams args b = List.fold_right lam args b
+
+let apps a args = List.fold_left app a args
 
 (** Pretty-print the term using the minimal number of parentheses. *)
 let rec print_term out term =
