@@ -1,5 +1,5 @@
 holide
-_build
+build
 dedukti/*
 opentheory/*
 twelf/*
