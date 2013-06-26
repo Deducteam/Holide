@@ -19,6 +19,6 @@ let fail () =
 
 let () =
   Arg.parse options Input.set_input usage;
-  if Input.get_module_name () = ""
-  then fail ()
-  else Article.translate_file ()
+  if !Input.input_file = "" then fail () else
+  if !Output.output_file = "" then Output.set_output (Filename.chop_extension !Input.input_file ^ ".dk");
+  Article.translate_file ()
