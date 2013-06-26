@@ -19,6 +19,8 @@ let fail () =
 
 let () =
   Arg.parse options Input.set_input usage;
-  if !Input.input_file = "" then fail () else
-  if !Output.output_file = "" then Output.set_output (Filename.chop_extension !Input.input_file ^ ".dk");
+  if !Input.input_file = ""
+  then fail ();
+  if !Output.output_file = ""
+  then Output.set_output (Filename.chop_extension !Input.input_file ^ ".dk");
   Article.translate_file ()
