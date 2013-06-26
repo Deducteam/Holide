@@ -11,7 +11,7 @@ type stack_object =
 | Num of int
 | List of stack_object list
 | TypeOp of string
-| Type
+| Type of Type.hol_type
 | Const of string
 | Var of string
 | Term
@@ -40,8 +40,7 @@ let process_name stack cmd =
   let namespace_str = Printf.sprintf "\\(%s[\\.]\\)*" component_str in
   let name_str = Printf.sprintf "\"\\(%s%s\\)\"" namespace_str component_str in
   (* Compile the regular expression and try to match the whole string. *)
-  let name_regexp = Str.regexp name_str in
-  if not (Str.string_match name_regexp cmd 0) ||
+  if not (Str.string_match (Str.regexp name_str) cmd 0) ||
     Str.match_end () != String.length cmd
     then failwith (Printf.sprintf "Invalid name %s" cmd);
   (* Extract the unquoted string. *)
@@ -76,7 +75,7 @@ let process_command cmd stack =
   | "betaConv", Term :: stack -> Thm :: stack
   | "cons", List(tail) :: head :: stack -> List(head :: tail) :: stack
   | "const", Name(name) :: stack -> Const(name) :: stack
-  | "constTerm", Type :: Const(c) :: stack -> Term :: stack
+  | "constTerm", Type(a) :: Const(c) :: stack -> Term :: stack
   | "deductAntisym", Thm :: Thm :: stack -> Thm :: stack
   | "def", Num(k) :: obj :: stack ->
       dict_add k obj;
@@ -91,7 +90,13 @@ let process_command cmd stack =
       Thm :: Thm :: Const(rep_name) :: Const(abs_name) :: TypeOp(op_name) :: stack
   | "eqMp", Thm :: Thm :: stack -> Thm :: stack
   | "nil", stack -> List([]) :: stack
-  | "opType", List(args) :: TypeOp(type_op) :: stack -> Type :: stack
+  | "opType", List(args) :: TypeOp(type_op) :: stack ->
+      let extract_type obj =
+        match obj with
+        | Type(a) -> a
+        | _ -> failwith "not a type object" in
+      let args = List.map extract_type args in
+      Type(Type.type_app type_op args) :: stack
   | "pop", _ :: stack -> stack
   | "ref", Num(k) :: stack -> dict_find k :: stack
   | "refl", Term :: stack -> Thm :: stack
@@ -102,7 +107,7 @@ let process_command cmd stack =
   | "subst", Thm :: List([List(theta); List(sigma)]) :: stack ->
       let extract_type_subst obj =
         match obj with
-        | List([Name(a); Type]) -> a
+        | List([Name(x); Type(a)]) -> x
         | _ -> failwith "not a type substitution" in
       let extract_term_subst obj =
         match obj with
@@ -113,9 +118,9 @@ let process_command cmd stack =
       Thm :: stack
   | "thm", Term :: List(qs) :: Thm :: stack -> stack
   | "typeOp", Name(type_op) :: stack -> TypeOp(type_op) :: stack
-  | "var", Type :: Name(x) :: stack -> Var(x) :: stack
+  | "var", Type(a) :: Name(x) :: stack -> Var(x) :: stack
   | "varTerm", Var(x) :: stack -> Term :: stack
-  | "varType", Name(a) :: stack -> Type :: stack
+  | "varType", Name(a) :: stack -> Type(Type.type_var a) :: stack
   | _ -> failwith "invalid command/state"
 
 (** Read and process the article file. *)
