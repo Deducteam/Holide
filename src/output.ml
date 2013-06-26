@@ -12,6 +12,10 @@ let set_output filename =
   output_file := filename;
   output_channel := open_out filename
 
+(** Printf-like function for printing information. *)
+let print_verbose fmt =
+  if !quiet then Printf.ifprintf stdout fmt else Printf.fprintf stdout fmt
+
 let print_comment comment =
   Printf.fprintf !output_channel "(; %s ;)\n\n" comment
 
