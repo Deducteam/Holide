@@ -1,4 +1,6 @@
-(** HOL Terms *)
+(** This module implements the terms of HOL and their translation to Dedukti.
+    The translation of the datatypes uses sharing, which is handled by smart
+    constructors. *)
 
 type var = string
 
@@ -78,7 +80,7 @@ let translate_cst c =
 let translate_type a =
   Dedukti.app (Dedukti.var (Name.hol "term")) (Type.translate_type a)
 
-(** Translate the HOL term [a] as a Dedukti term. *)
+(** Translate the HOL term [t] as a Dedukti term. *)
 let rec translate_term t =
   try
     let id = TermSharing.find t in

@@ -1,4 +1,6 @@
-(** HOL Types *)
+(** This module implements the types of HOL and their translation to Dedukti.
+    The translation of the datatypes uses sharing, which is handled by smart
+    constructors. *)
 
 type var = string
 
