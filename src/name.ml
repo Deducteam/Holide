@@ -19,7 +19,7 @@ let escape name =
     then Printf.sprintf "%c" c
     else if c = '_'
     then Printf.sprintf "__"
-    else Printf.sprintf "_%2X" (Char.code c) in
+    else Printf.sprintf "_%02X" (Char.code c) in
   let rec escape i () name =
     if i = String.length name
     then Printf.sprintf ""
