@@ -12,13 +12,6 @@ type term =
 | Lam of var * Type.hol_type * term
 | App of term * term
 
-module TermSharing = Sharing.Make(
-  struct
-    type t = term
-    let equal = (=)
-    let hash = Hashtbl.hash
-  end)
-
 (** Type schemes of the declared constants. *)
 (* Cannot use the smart constructors because the output environment has not
     been setup yet. *)
@@ -35,10 +28,7 @@ let rec type_of a =
   | Var(x, a) -> a
   | Cst(c, a) -> a
   | Lam(x, a, b) -> Type.arr a (type_of b)
-  | App(t, u) ->
-      match type_of t with
-      | Type.App("->", [a; b]) -> b
-      | _ -> failwith "Ill-typed term"
+  | App(t, u) -> let a, b = Type.get_arr (type_of t) in b
 
 (** Free variables *)
 
@@ -58,7 +48,37 @@ let free_vars fv a =
     | App(t, u) -> free_vars bound (free_vars bound fv t) u
   in free_vars [] fv a
 
+type index =
+| Bound of int
+| Free of var * Type.hol_type
+
+let index context (x, a) =
+  let rec index i context =
+    match context with
+    | [] -> Free(x, a)
+    | (y, b) :: context ->
+        if (x, a) = (y, b) then Bound(i)
+        else index (i + 1) context
+  in index 0 context
+
+let alpha_equiv t u =
+  let rec alpha_equiv bindings_t bindings_u t u =
+    match t, u with
+    | Var(x, a), Var(y, b) -> a = b && (index bindings_t (x, a) = index bindings_u (y, b))
+    | Cst(c, a), Cst(d, b) -> a = b && c = d
+    | Lam(x, a, t), Lam(y, b, u) -> a = b && (alpha_equiv ((x, a) :: bindings_t) ((y, b) :: bindings_u) t u)
+    | App(t1, t2), App(u1, u2) -> (alpha_equiv bindings_t bindings_u t1 u1) && (alpha_equiv bindings_t bindings_u t2 u2)
+    | _ -> false
+  in alpha_equiv [] [] t u
+
 (** Translation *)
+
+module TermSharing = Sharing.Make(
+  struct
+    type t = term
+    let equal = (=)
+    let hash = Hashtbl.hash
+  end)
 
 let translate_id id = Name.id "term" id
 
@@ -67,8 +87,7 @@ let translate_var (x, a) =
      suffix the hash of the type to avoid clashes. Use hashparam to avoid
      collisions (which would otherwise happen often). *)
   let hash = Hashtbl.hash_param 1000000 1000000 a mod 256 in
-  let name = Printf.sprintf "%s%c" x (Char.chr hash) in
-  Name.escape name
+  Printf.sprintf "%s_%02X" (Name.escape x) hash
 
 let translate_cst c =
   match c with
@@ -111,27 +130,35 @@ let rec translate_term t =
         let u' = translate_term u in
         Dedukti.app t' u'
 
+(** Translate the list of term variables [x1, a1; ...; xn, an]
+    into the dedukti context [x1 : ||a1||; ...; xn : ||an||] *)
+let translate_vars_context vars =
+  List.map (fun (x, a) -> (translate_var (x, a), translate_type a)) vars
+
 (** Declare the term [c : a]. *)
 let declare_cst c a =
-  Output.print_verbose "Declaring constant %s\n" c;
+  Output.print_verbose "Declaring constant %s\n%!" c;
   let ftv = Type.free_vars [] a in
   let c' = translate_cst c in  
-  let ftv' = List.map (fun x -> (Type.translate_var x, Type.translate_kind 0)) ftv in
+  let ftv' = Type.translate_vars_context ftv in
   let a' = Dedukti.pies ftv' (translate_type a) in
   Output.print_declaration c' a';
   csts := (c, a) :: !csts
 
 (** Define the term [id := t]. *)
-let define_term id t =
-  let a = type_of t in
-  let ftv = free_type_vars [] t in
-  let fv = free_vars [] t in
-  let id' = translate_id id in  
-  let ftv' = List.map (fun x -> (Type.translate_var x, Type.translate_kind 0)) ftv in
-  let fv' = List.map (fun (x, a) -> translate_var (x, a), translate_type a) fv in
-  let a' = Dedukti.pies ftv' (Dedukti.pies fv' (translate_type a)) in
-  let t' = Dedukti.lams ftv' (Dedukti.lams fv' (translate_term t)) in
-  Output.print_definition false id' a' t'
+let define_term t =
+  let _ = if not (TermSharing.mem t) then (
+    let a = type_of t in
+    let ftv = free_type_vars [] t in
+    let fv = free_vars [] t in  
+    let ftv' = Type.translate_vars_context ftv in
+    let fv' = translate_vars_context fv in
+    let a' = Dedukti.pies ftv' (Dedukti.pies fv' (translate_type a)) in
+    let t' = Dedukti.lams ftv' (Dedukti.lams fv' (translate_term t)) in
+    let id = TermSharing.add t in
+    let id' = translate_id id in
+    Output.print_definition false id' a' t';)
+  in t
 
 (** Smart constructors *)
 
@@ -140,21 +167,62 @@ let var x a = Var(x, a)
 let cst c a =
   (* Check first if the constant is declared. *)
   if not (is_declared c) then (
-    Output.print_verbose "Warning: using undeclared constant %s\n" c;
+    Output.print_verbose "Warning: using undeclared constant %s\n%!" c;
     (* Cannot assume the time of [c] is [a], as it can be more general. *)
     declare_cst c (Type.var "A"));
-   TermSharing.add define_term (Cst(c, a))
+   define_term (Cst(c, a))
 
-let lam x a t = TermSharing.add define_term (Lam(x, a, t))
+let lam x a t = define_term (Lam(x, a, t))
 
-let app t u = TermSharing.add define_term (App(t, u))
+let app t u = define_term (App(t, u))
 
 let eq t u =
   let a = type_of t in
   app (app (cst "=" (Type.arr a (Type.arr a (Type.bool ())))) t) u
 
 let select p =
-  match type_of p with
-  | Type.App("->", [a; b]) -> app (cst "select" (Type.arr (Type.arr a b) (Type.bool ()))) p
-  | _ -> failwith ("Ill-typed term")
+  let a, b = Type.get_arr (type_of p) in
+  app (cst "select" (Type.arr (Type.arr a b) (Type.bool ()))) p
+
+let get_eq t =
+  match t with
+  | App(App(Cst("=", _), t), u) -> (t, u)
+  | _ -> failwith "Not an equality"
+
+let get_select t =
+  match t with
+  | App(Cst("select", _), p) -> p
+  | _ -> failwith "Not a select operation"
+
+(** Substitutions *)
+
+let rec type_subst theta t =
+  match t with
+  | Var(x, a) -> var x (Type.subst theta a)
+  | Cst(c, a) -> cst c (Type.subst theta a)
+  | Lam(x, a, t) -> lam x (Type.subst theta a) (type_subst theta t)
+  | App(t, u) -> app (type_subst theta t) (type_subst theta u)
+
+(** Return a variant of the variable [x] of type [a] which does not appear in
+    the list of variables [avoid]. *)
+let rec variant (x, a) avoid =
+  if not (List.mem (x, a) avoid) then x else variant (x ^ "_", a) avoid
+
+(** Capture-avoiding term substitution. The substitution must be given as
+    a list of the form [(x1, a1), u1; ...; (xn, an), un]. *)
+let subst sigma t =
+  let fv = List.fold_left free_vars (free_vars [] t) (snd (List.split sigma)) in
+  let rec subst fv sigma t =
+    match t with
+    | Var(x, a) ->
+        begin try List.assoc (x, a) sigma
+        with Not_found -> t end
+    | Cst(_) -> t
+    | Lam(x, a, t) ->
+        let x' = variant (x, a) fv in
+        let sigma' = ((x, a), var x' a) :: sigma in
+        let fv' = (x', a) :: fv in
+        lam x' a (subst fv' sigma' t)
+    | App(t, u) -> app (subst fv sigma t) (subst fv sigma u)
+  in subst fv sigma t
 

@@ -14,14 +14,13 @@ module type HashedType =
 module Make(H : HashedType) :
   sig
   
-(** If [node] is not in the table, [add define node] generates a new [id],
-    calls [define id node], then assigns [node] to [id] in the table.
-    Does nothing if [node] is already in the table.
-    Returns [node] in both cases. *)
-    val add : (id -> H.t -> unit) -> H.t -> H.t
+    val mem : H.t -> bool
+  
+(** If the node is not in the table, generate a new [id] and associate it with
+    the node. Return the [id] associated with [node]. *)
+    val add : H.t -> id
 
-(** [find node] returns the [id] associated to [node] in the table.
-    Raises [Not_found] if [node] is not in the table. *)
+(** Return the [id] associated with [node]. *)
     val find : H.t -> id
 
   end =
@@ -29,12 +28,12 @@ module Make(H : HashedType) :
   
     let table = Hashtbl.create 10007
     
-    let add define node =
-      if not (Hashtbl.mem table node) then (
-        let id = Hashtbl.length table in
-        define id node;
-        Hashtbl.add table node id);
-      node
+    let mem node = Hashtbl.mem table node
+    
+    let add node =
+      if not (Hashtbl.mem table node)
+      then Hashtbl.add table node (Hashtbl.length table);
+      Hashtbl.find table node
       
     let find node = Hashtbl.find table node
     

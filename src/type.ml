@@ -68,20 +68,30 @@ let rec translate_type a =
         let args' = List.map translate_type args in
         Dedukti.apps op' args'
 
+(** Translate the list of type variables [x1; ...; xn]
+    into the dedukti context [x1 : type; ...; xn : type] *)
+let translate_vars_context vars =
+  List.map (fun x -> (translate_var x, translate_kind 0)) vars
+
+(** Declare the Dedukti term [op : |arity|]. *)
 let declare_op op arity =
-  Output.print_verbose "Declaring type operator %s\n" op;
+  Output.print_verbose "Declaring type operator %s\n%!" op;
   let op' = translate_op op in
   let arity' = translate_kind arity in
   Output.print_declaration op' arity';
   ops := (op, arity) :: !ops
 
-let define_type id a =
-  let id' = translate_type_id id in
-  let xs = free_vars [] a in
-  let xs' = List.map (fun x -> (translate_var x, translate_kind 0)) xs in
-  let arity' = translate_kind (List.length xs) in
-  let a' = Dedukti.lams xs' (translate_type a) in
-  Output.print_definition false id' arity' a'
+(** Define the Dedukti term [id := |a|]. *)
+let define_type a =
+  let _ = if not (TypeSharing.mem a) then (
+    let xs = free_vars [] a in
+    let xs' = translate_vars_context xs in
+    let arity' = translate_kind (List.length xs) in
+    let a' = Dedukti.lams xs' (translate_type a) in
+    let id = (TypeSharing.add a) in
+    let id' = translate_type_id id in
+    Output.print_definition false id' arity' a')
+  in a
 
 (** Smart constructors *)
 
@@ -91,9 +101,9 @@ let var x = Var(x)
 let app op args =
   (* Check first if the type operator is declared. *)
   if not (is_declared op) then (
-    Output.print_verbose "Warning: using undeclared type operator %s\n" op;
+    Output.print_verbose "Warning: using undeclared type operator %s\n%!" op;
     declare_op op (List.length args));
-  TypeSharing.add define_type (App(op, args))
+  define_type (App(op, args))
 
 (* Use unit to avoid evaluation while the environment is not set up yet. *)
 let bool () = app "bool" []
@@ -102,12 +112,17 @@ let ind () = app "ind" []
 
 let arr a b = app "->" [a; b]
 
+let get_arr a =
+  match a with
+  | App("->", [a; b]) -> (a, b)
+  | _ -> failwith ("Not an arrow type")
+
 (** Substitutions *)
 
-let rec type_subst theta a =
+let rec subst theta a =
   match a with
   | Var(x) -> if List.mem_assoc x theta then List.assoc x theta else a
-  | App(op, args) -> app op (List.map (type_subst theta) args)
+  | App(op, args) -> app op (List.map (subst theta) args)
 
 (** Match the type [a] against [b], generating a type substitution for the type
     variables in [b]. *)
