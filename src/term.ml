@@ -7,17 +7,17 @@ type var = string
 type cst = string
 
 type term =
-| Var of var * Type.hol_type
-| Cst of cst * Type.hol_type
-| Lam of var * Type.hol_type * term
-| App of term * term
+  | Var of var * Type.hol_type
+  | Cst of cst * Type.hol_type
+  | Lam of var * Type.hol_type * term
+  | App of term * term
 
 (** Type schemes of the declared constants. *)
 (* Cannot use the smart constructors because the output environment has not
     been setup yet. *)
 let csts = ref [
-  "=", Type.App("->", [Type.Var("A"); Type.App("->", [Type.Var("A"); Type.App("bool", [])])]);
-  "select", Type.App("->", [Type.App("->", [Type.Var("A"); Type.App("bool", [])]); Type.Var("A")]);
+    "=", Type.App("->", [Type.Var("A"); Type.App("->", [Type.Var("A"); Type.App("bool", [])])]);
+    "select", Type.App("->", [Type.App("->", [Type.Var("A"); Type.App("bool", [])]); Type.Var("A")]);
   ]
 
 let is_declared c = List.mem_assoc c !csts
@@ -49,16 +49,16 @@ let free_vars fv a =
   in free_vars [] fv a
 
 type index =
-| Bound of int
-| Free of var * Type.hol_type
+  | Bound of int
+  | Free of var * Type.hol_type
 
 let index context (x, a) =
   let rec index i context =
     match context with
     | [] -> Free(x, a)
     | (y, b) :: context ->
-        if (x, a) = (y, b) then Bound(i)
-        else index (i + 1) context
+      if (x, a) = (y, b) then Bound(i)
+      else index (i + 1) context
   in index 0 context
 
 let alpha_equiv t u =
@@ -112,23 +112,23 @@ let rec translate_term t =
   with Not_found ->
     match t with
     | Var(x, a) ->
-        Dedukti.var (translate_var (x, a))
+      Dedukti.var (translate_var (x, a))
     | Cst(c, a) ->
-        let b = List.assoc c !csts in
-        let ftv = Type.free_vars [] b in
-        let theta = Type.match_type [] a b in
-        let c' = Dedukti.var (translate_cst c) in
-        let theta' = List.map (fun x -> Type.translate_type (List.assoc x theta)) ftv in
-        Dedukti.apps c' theta'
+      let b = List.assoc c !csts in
+      let ftv = Type.free_vars [] b in
+      let theta = Type.match_type [] a b in
+      let c' = Dedukti.var (translate_cst c) in
+      let theta' = List.map (fun x -> Type.translate_type (List.assoc x theta)) ftv in
+      Dedukti.apps c' theta'
     | Lam(x, a, t) ->
-        let x' = translate_var (x, a) in
-        let a' = translate_type a in
-        let t' = translate_term t in
-        Dedukti.lam (x', a') t'
+      let x' = translate_var (x, a) in
+      let a' = translate_type a in
+      let t' = translate_term t in
+      Dedukti.lam (x', a') t'
     | App(t, u) ->
-        let t' = translate_term t in
-        let u' = translate_term u in
-        Dedukti.app t' u'
+      let t' = translate_term t in
+      let u' = translate_term u in
+      Dedukti.app t' u'
 
 (** Translate the list of term variables [x1, a1; ...; xn, an]
     into the dedukti context [x1 : ||a1||; ...; xn : ||an||] *)
@@ -148,16 +148,16 @@ let declare_cst c a =
 (** Define the term [id := t]. *)
 let define_term t =
   let _ = if not (TermSharing.mem t) then (
-    let a = type_of t in
-    let ftv = free_type_vars [] t in
-    let fv = free_vars [] t in  
-    let ftv' = Type.translate_vars_context ftv in
-    let fv' = translate_vars_context fv in
-    let a' = Dedukti.pies ftv' (Dedukti.pies fv' (translate_type a)) in
-    let t' = Dedukti.lams ftv' (Dedukti.lams fv' (translate_term t)) in
-    let id = TermSharing.add t in
-    let id' = translate_id id in
-    Output.print_definition false id' a' t';)
+      let a = type_of t in
+      let ftv = free_type_vars [] t in
+      let fv = free_vars [] t in  
+      let ftv' = Type.translate_vars_context ftv in
+      let fv' = translate_vars_context fv in
+      let a' = Dedukti.pies ftv' (Dedukti.pies fv' (translate_type a)) in
+      let t' = Dedukti.lams ftv' (Dedukti.lams fv' (translate_term t)) in
+      let id = TermSharing.add t in
+      let id' = translate_id id in
+      Output.print_definition false id' a' t';)
   in t
 
 (** Smart constructors *)
@@ -170,7 +170,7 @@ let cst c a =
     Output.print_verbose "Warning: using undeclared constant %s\n%!" c;
     (* Cannot assume the time of [c] is [a], as it can be more general. *)
     declare_cst c (Type.var "A"));
-   define_term (Cst(c, a))
+  define_term (Cst(c, a))
 
 let lam x a t = define_term (Lam(x, a, t))
 
@@ -215,14 +215,14 @@ let subst sigma t =
   let rec subst fv sigma t =
     match t with
     | Var(x, a) ->
-        begin try List.assoc (x, a) sigma
+      begin try List.assoc (x, a) sigma
         with Not_found -> t end
     | Cst(_) -> t
     | Lam(x, a, t) ->
-        let x' = variant (x, a) fv in
-        let sigma' = ((x, a), var x' a) :: sigma in
-        let fv' = (x', a) :: fv in
-        lam x' a (subst fv' sigma' t)
+      let x' = variant (x, a) fv in
+      let sigma' = ((x, a), var x' a) :: sigma in
+      let fv' = (x', a) :: fv in
+      lam x' a (subst fv' sigma' t)
     | App(t, u) -> app (subst fv sigma t) (subst fv sigma u)
   in subst fv sigma t
 

@@ -5,36 +5,41 @@
 type id = int
 
 module type HashedType =
-  sig
-    type t
-    val equal : t -> t -> bool
-    val hash : t -> int
-  end
+sig
+
+  type t
+
+  val equal : t -> t -> bool
+
+  val hash : t -> int
+
+end
 
 module Make(H : HashedType) :
-  sig
-  
-    val mem : H.t -> bool
-  
-(** If the node is not in the table, generate a new [id] and associate it with
-    the node. Return the [id] associated with [node]. *)
-    val add : H.t -> id
+sig
 
-(** Return the [id] associated with [node]. *)
-    val find : H.t -> id
+  val mem : H.t -> bool
 
-  end =
-  struct
-  
-    let table = Hashtbl.create 10007
-    
-    let mem node = Hashtbl.mem table node
-    
-    let add node =
-      if not (Hashtbl.mem table node)
-      then Hashtbl.add table node (Hashtbl.length table);
-      Hashtbl.find table node
-      
-    let find node = Hashtbl.find table node
-    
-  end
+  (** If the node is not in the table, generate a new [id] and associate it
+      with the node. Return the [id] associated with [node]. *)
+  val add : H.t -> id
+
+  (** Return the [id] associated with [node]. *)
+  val find : H.t -> id
+
+end =
+struct
+
+  let table = Hashtbl.create 10007
+
+  let mem node = Hashtbl.mem table node
+
+  let add node =
+    if not (Hashtbl.mem table node)
+    then Hashtbl.add table node (Hashtbl.length table);
+    Hashtbl.find table node
+
+  let find node = Hashtbl.find table node
+
+end
+

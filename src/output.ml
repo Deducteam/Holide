@@ -30,8 +30,9 @@ let print_declaration x a =
   Printf.fprintf !output_channel "\n%s : %a.\n" x Dedukti.print_term a
 
 (** Print the definition ["x : a := b"].
-   If [opaque] is set to [true], the definition will be opaque. *)
+    If [opaque] is set to [true], the definition will be opaque. *)
 let print_definition opaque x a b =
   if opaque
   then Printf.fprintf !output_channel "\n{%s} : %a :=\n  %a.\n" x Dedukti.print_term a Dedukti.print_term b
   else Printf.fprintf !output_channel "\n%s : %a :=\n  %a.\n" x Dedukti.print_term a Dedukti.print_term b
+

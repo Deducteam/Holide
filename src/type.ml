@@ -7,8 +7,8 @@ type var = string
 type op = string
 
 type hol_type =
-| Var of var
-| App of op * hol_type list
+  | Var of var
+  | App of op * hol_type list
 
 module TypeSharing = Sharing.Make(
   struct
@@ -19,9 +19,9 @@ module TypeSharing = Sharing.Make(
 
 (** Arities of the declared type operators. *)
 let ops = ref [
-  "bool", 0;
-  "ind", 0;
-  "->", 2;
+    "bool", 0;
+    "ind", 0;
+    "->", 2;
   ]
 
 let is_declared op = List.mem_assoc op !ops
@@ -62,11 +62,11 @@ let rec translate_type a =
   with Not_found ->
     match a with
     | Var(x) ->
-        Dedukti.var (translate_var x)
+      Dedukti.var (translate_var x)
     | App(op, args) ->
-        let op' = Dedukti.var (translate_op op) in
-        let args' = List.map translate_type args in
-        Dedukti.apps op' args'
+      let op' = Dedukti.var (translate_op op) in
+      let args' = List.map translate_type args in
+      Dedukti.apps op' args'
 
 (** Translate the list of type variables [x1; ...; xn]
     into the dedukti context [x1 : type; ...; xn : type] *)
@@ -84,13 +84,13 @@ let declare_op op arity =
 (** Define the Dedukti term [id := |a|]. *)
 let define_type a =
   let _ = if not (TypeSharing.mem a) then (
-    let xs = free_vars [] a in
-    let xs' = translate_vars_context xs in
-    let arity' = translate_kind (List.length xs) in
-    let a' = Dedukti.lams xs' (translate_type a) in
-    let id = (TypeSharing.add a) in
-    let id' = translate_type_id id in
-    Output.print_definition false id' arity' a')
+      let xs = free_vars [] a in
+      let xs' = translate_vars_context xs in
+      let arity' = translate_kind (List.length xs) in
+      let a' = Dedukti.lams xs' (translate_type a) in
+      let id = (TypeSharing.add a) in
+      let id' = translate_type_id id in
+      Output.print_definition false id' arity' a')
   in a
 
 (** Smart constructors *)
@@ -134,8 +134,8 @@ let rec match_type theta a b =
         else failwith "type match: inconsistent instantiation"
       with Not_found -> (x, a) :: theta)
   | App(op_a, args_a), App(op_b, args_b) ->
-      if op_a <> op_b
-      then failwith (Printf.sprintf "type match: type operators %s and %s do not agree" op_a op_b)
-      else List.fold_left2 match_type theta args_a args_b
+    if op_a <> op_b
+    then failwith (Printf.sprintf "type match: type operators %s and %s do not agree" op_a op_b)
+    else List.fold_left2 match_type theta args_a args_b
   | _ -> failwith "type match: not an instance"
 

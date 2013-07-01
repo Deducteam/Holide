@@ -5,9 +5,9 @@ let show_version () =
   exit 0
 
 let options = Arg.align [
-  "-o", Arg.String(Output.set_output), "<file> Set output filename";
-  "--quiet", Arg.Set(Output.quiet), " Suppress all information";
-  "--version", Arg.Unit(show_version), " Print version and exit";
+    "-o", Arg.String(Output.set_output), "<file> Set output filename";
+    "--quiet", Arg.Set(Output.quiet), " Suppress all information";
+    "--version", Arg.Unit(show_version), " Print version and exit";
   ]
 
 let usage =
@@ -24,3 +24,4 @@ let () =
   if !Output.output_file = ""
   then Output.set_output (Filename.chop_extension !Input.input_file ^ ".dk");
   Article.translate_file ()
+
