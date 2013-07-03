@@ -23,5 +23,5 @@ let () =
   then fail ();
   if !Output.output_file = ""
   then Output.set_output (Filename.chop_extension !Input.input_file ^ ".dk");
-  Article.translate_file ()
+  Article.process_file ()
 
