@@ -121,10 +121,10 @@ let rec translate_thm term_context ((gamma, p, proof) as thm) =
 
     | _ -> failwith "Not implemented"
 
-(** Translate the set of hypotheses {p1; ...; pn}
+(** Translate the list of hypotheses [p1; ...; pn]
     into the Dedukti terms [x1 : ||p1||; ...; xn : ||pn||] *)
 let translate_hyps term_context hyps =
-  List.map (fun p -> (translate_hyp p, translate_prop term_context p)) (TermSet.elements hyps)
+  List.map (fun p -> (translate_hyp p, translate_prop term_context p)) hyps
 
 (** Declare the axiom [gamma |- p] **)
 let declare_axiom (gamma, p) =
@@ -134,7 +134,7 @@ let declare_axiom (gamma, p) =
       let fv = List.fold_left Term.free_vars [] (p :: (TermSet.elements gamma)) in
       let ftv' = Type.translate_vars (List.rev ftv) in
       let fv' = Term.translate_vars [] (List.rev fv) in
-      let gamma' = translate_hyps fv gamma in
+      let gamma' = translate_hyps fv (TermSet.elements gamma) in
       let p' = Dedukti.pies ftv' (Dedukti.pies fv' (Dedukti.pies gamma' (translate_prop fv p))) in
       let id = ThmSharing.add (gamma, p, Axiom(gamma, p)) in
       let id' = translate_id id in
@@ -148,7 +148,7 @@ let define_thm comment ((gamma, p, _) as thm) =
       let fv = free_vars thm in
       let ftv' = Type.translate_vars (List.rev ftv) in
       let fv' = Term.translate_vars [] (List.rev fv) in
-      let gamma' = translate_hyps fv gamma in
+      let gamma' = translate_hyps fv (TermSet.elements gamma) in
       let p' = Dedukti.pies ftv' (Dedukti.pies fv' (Dedukti.pies gamma' (translate_prop fv p))) in
       let thm' = Dedukti.lams ftv' (Dedukti.lams fv' (Dedukti.lams gamma' (translate_thm fv thm))) in
       let id = ThmSharing.add thm in
