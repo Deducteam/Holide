@@ -17,11 +17,11 @@ let print_verbose fmt =
   if !quiet then Printf.ifprintf stdout fmt else Printf.fprintf stdout fmt
 
 let print_comment comment =
-  Printf.fprintf !output_channel "\n(; %s ;)" comment
+  Printf.fprintf !output_channel "\n(; %s ;)\n" comment
 
 (** Print the command (e.g. ["NAME"], ["IMPORT"]) followed by its arguments. *)
 let print_command command args =
-  Printf.fprintf !output_channel "#%s" command;
+  Printf.fprintf !output_channel "\n#%s" command;
   List.iter (Printf.fprintf !output_channel " %s") args;
   Printf.fprintf !output_channel "\n"
 
