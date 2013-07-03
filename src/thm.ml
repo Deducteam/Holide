@@ -175,7 +175,7 @@ let rec translate_thm term_context context ((gamma, p, proof) as thm) =
     | _ -> failwith "Not implemented"
 
 (** Declare the axiom [gamma |- p] **)
-let declare_axiom (gamma, p) =
+let declare_axiom comment (gamma, p) =
   let thm = (gamma, p, Axiom(gamma, p)) in
   let _ = if not (ThmSharing.mem thm) then (
       let ftv = List.fold_left Term.free_type_vars [] (p :: (TermSet.elements gamma)) in
@@ -186,6 +186,7 @@ let declare_axiom (gamma, p) =
       let p' = Dedukti.pies ftv' (Dedukti.pies fv' (Dedukti.pies gamma' (translate_prop fv p))) in
       let id = ThmSharing.add (gamma, p, Axiom(gamma, p)) in
       let id' = translate_id id in
+      Output.print_comment comment;
       Output.print_declaration id' p');
   in thm
 
@@ -209,7 +210,7 @@ let define_thm comment ((gamma, p, _) as thm) =
 
 let axiom gamma p =
   List.iter check_prop (p :: gamma);
-  declare_axiom (TermSet.of_list gamma, p)
+  declare_axiom "axiom" (TermSet.of_list gamma, p)
 
 let refl t =
   define_thm "refl" (TermSet.empty, Term.eq t t, Refl(t))
@@ -244,16 +245,29 @@ let subst theta sigma ((gamma, p, _) as thm_p) =
   let s t = Term.subst sigma (Term.type_subst theta t) in
   define_thm "subst" (TermSet.map s gamma, s p, Subst(theta, sigma, thm_p))
 
-(* TODO *)
-
 let define_const c t =
   if Term.free_vars [] t <> [] then failwith "constant definition contains free variables";
   let a = Term.type_of t in
   Term.declare_cst c a;
-  declare_axiom (TermSet.empty, Term.eq (Term.cst c a) t)
+  declare_axiom "defineConst" (TermSet.empty, Term.eq (Term.cst c a) t)
 
-let define_type_op op abs rep _ =
-  failwith "Not implemented"
+let define_type_op op abs rep (gamma, pt, _) =
+  if not (TermSet.is_empty gamma) then failwith "type definition contains hypotheses";
+  match pt with
+  | Term.App(p, t) ->
+    let a = Term.type_of t in
+    let ftv = Term.free_type_vars [] p in
+    Type.declare_op op (List.length ftv);
+    let b = Type.app op (List.map Type.var ftv) in
+    Term.declare_cst abs (Type.arr a b);
+    Term.declare_cst rep (Type.arr b a);
+    let abs = Term.cst abs (Type.arr a b) in
+    let rep = Term.cst rep (Type.arr b a) in
+    let var_a = Term.var ("a", b) in
+    let var_r = Term.var ("r", a) in
+    (declare_axiom "defineTypeOp" (TermSet.empty, Term.eq (Term.app abs (Term.app rep var_a)) var_a),
+     declare_axiom "defineTypeOp" (TermSet.empty, Term.eq (Term.app p var_r) (Term.eq (Term.app rep (Term.app abs var_r)) var_r)))
+  | _ -> failwith "ill-formed type definition"
 
 let thm gamma p ((delta, q, _) as thm) =
   if Term.compare p q <> 0 then failwith "theorem conclusion must be alpha-equivalent";
