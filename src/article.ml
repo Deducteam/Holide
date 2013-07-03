@@ -40,7 +40,7 @@ let process_name stack cmd =
   let name_str = Printf.sprintf "\"\\(%s%s\\)\"" namespace_str component_str in
   (* Compile the regular expression and try to match the whole string. *)
   if not (Str.string_match (Str.regexp name_str) cmd 0) ||
-     Str.match_end () != String.length cmd
+     Str.match_end () <> String.length cmd
   then failwith (Printf.sprintf "Invalid name %s" cmd);
   (* Extract the unquoted string. *)
   let name = Str.matched_group 1 cmd in
