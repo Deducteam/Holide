@@ -82,7 +82,7 @@ let rec translate_thm term_context context ((gamma, p, proof) as thm) =
     let fv = free_vars thm in
     let id' = Dedukti.var (translate_id id) in
     let ftv' = List.map (fun x -> Dedukti.var (Type.translate_var x)) (List.rev ftv) in
-    let fv' = List.map (fun x -> Dedukti.var (Term.translate_var term_context x)) (List.rev fv) in
+    let fv' = List.map (fun x -> Term.translate_var_term term_context x) (List.rev fv) in
     let gammas' = List.map (fun p -> Dedukti.var (translate_hyp context p)) (List.rev (TermSet.elements gamma)) in
     Dedukti.apps (Dedukti.apps (Dedukti.apps id' ftv') fv') gammas'
   with Not_found ->
@@ -251,14 +251,15 @@ let define_const c t =
   Term.declare_cst c a;
   declare_axiom "defineConst" (TermSet.empty, Term.eq (Term.cst c a) t)
 
-let define_type_op op abs rep (gamma, pt, _) =
+let define_type_op op abs rep tvars (gamma, pt, _) =
   if not (TermSet.is_empty gamma) then failwith "type definition contains hypotheses";
   match pt with
   | Term.App(p, t) ->
     let a = Term.type_of t in
     let ftv = Term.free_type_vars [] p in
-    Type.declare_op op (List.length ftv);
-    let b = Type.app op (List.map Type.var ftv) in
+    if List.sort compare ftv <> List.sort compare tvars then failwith "type variables in type definition do not agree";
+    Type.declare_op op (List.length tvars);
+    let b = Type.app op (List.map Type.var tvars) in
     Term.declare_cst abs (Type.arr a b);
     Term.declare_cst rep (Type.arr b a);
     let abs = Term.cst abs (Type.arr a b) in

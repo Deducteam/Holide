@@ -56,7 +56,7 @@ let process_command cmd stack =
     if c = '#' then stack else (* Ignore comments *)
     if c = '\"' then process_name stack cmd else
     if Name.is_numerical c then process_num stack cmd else
-      (*  let _ = Output.print_verbose "Processing %s\n%!" cmd in*)
+(*      let _ = Output.print_verbose "Processing %s\n%!" cmd in*)
       match cmd, stack with
       | "absTerm", Term(t) :: Var(x) :: stack -> Term(Term.lam x t) :: stack
       | "absThm", Thm(thm_tu) :: Var(x) :: stack -> Thm(Thm.abs_thm x thm_tu) :: stack
@@ -79,13 +79,13 @@ let process_command cmd stack =
         dict_add k obj;
         obj :: stack
       | "defineConst", Term(t) :: Name(n) :: stack -> Thm(Thm.define_const n t) :: Const(n) :: stack
-      | "defineTypeOp", Thm(pt) :: List(type_vars) :: Name(rep) :: Name(abs) :: Name(op) :: stack ->
+      | "defineTypeOp", Thm(pt) :: List(tvars) :: Name(rep) :: Name(abs) :: Name(op) :: stack ->
         let extract_name obj =
           match obj with
           | Name(n) -> n
           | _ -> failwith "not a name object" in
-        let _ = List.map extract_name type_vars in
-        let abs_rep, rep_abs = Thm.define_type_op op abs rep pt in
+        let tvars = List.map extract_name tvars in
+        let abs_rep, rep_abs = Thm.define_type_op op abs rep tvars pt in
         Thm(rep_abs) :: Thm(abs_rep) :: Const(rep) :: Const(abs) :: TypeOp(op) :: stack
       | "eqMp", Thm(thm_p) :: Thm(thm_pq) :: stack -> Thm(Thm.eq_mp thm_pq thm_p) :: stack
       | "nil", stack -> List([]) :: stack
