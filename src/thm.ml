@@ -13,8 +13,8 @@ and proof =
   | DeductAntiSym of thm * thm
   | EqMp of thm * thm
   | BetaConv of Term.var * Term.term
-  | Subst of (Term.var * Term.term) list * thm
   | TypeSubst of (Type.var * Type.hol_type) list * thm
+  | TermSubst of (Term.var * Term.term) list * thm
   | DefineConst of Term.cst * Term.term
 
 module ThmSharing = Sharing.Make(
@@ -190,14 +190,14 @@ let beta_conv x t u =
   let p = Term.eq (Term.app (Term.lam x t) u) (Term.subst [x, u] t) in
   declare_axiom (gamma, p)
 
-let subst sigma (gamma, p, _) =
-  let p = Term.subst sigma p in
-  let gamma = List.map (Term.subst sigma) gamma in
-  declare_axiom (gamma, p)
-
 let type_subst theta (gamma, p, _) =
   let p = Term.type_subst theta p in
   let gamma = List.map (Term.type_subst theta) gamma in
+  declare_axiom (gamma, p)
+
+let term_subst sigma (gamma, p, _) =
+  let p = Term.subst sigma p in
+  let gamma = List.map (Term.subst sigma) gamma in
   declare_axiom (gamma, p)
 
 let define_const c t =
@@ -209,7 +209,10 @@ let define_const c t =
   let gamma = [] in
   declare_axiom (gamma, p)
 
-let thm thm =
+let define_type_op op abs rep _ =
+  failwith "Not implemented"
+
+let thm gamma p thm =
   Output.print_verbose "Declaring theorem\n%!";
   define_thm "thm" thm
 
