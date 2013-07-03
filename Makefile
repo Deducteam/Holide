@@ -13,9 +13,9 @@ native:
 
 byte:
 	$(OCAMLBUILD) $(OPTIONS) -libs $(LIBS) -Is $(INCLUDES) main.byte
-	ln -sf build/src/main.native holide
+	ln -sf build/src/main.byte holide
 
-test: byte
+test: native
 #	$(OCAMLBUILD) $(OPTIONS) -libs $(LIBS) -Is $(INCLUDES) test.byte --
 	holide opentheory/atomic/natural-exp-thm.art -o dedukti/atomic/natural-exp-thm.dk
 	cd dedukti && camelide atomic/natural-exp-thm.dk
