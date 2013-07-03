@@ -125,6 +125,14 @@ let rec translate_thm term_context context ((gamma, p, proof) as thm) =
       let thm_p' = Dedukti.lam (hq', translate_prop term_context q) (translate_thm term_context (q :: context) thm_p) in
       let thm_q' = Dedukti.lam (hp', translate_prop term_context p) (translate_thm term_context (p :: context) thm_q) in
       Dedukti.apps prop_ext' [p'; q'; thm_p'; thm_q']
+    
+    | EqMp(((_, p, _) as thm_p), ((_, q, _) as thm_pq)) ->
+      let eq_mp' = Dedukti.var (Name.hol "EQ_MP") in
+      let p' = Term.translate_term term_context p in
+      let q' = Term.translate_term term_context q in
+      let thm_p' = translate_thm term_context context thm_p in
+      let thm_pq' = translate_thm term_context context thm_pq in
+      Dedukti.apps eq_mp' [p'; q'; thm_p'; thm_pq']
 
     | _ -> failwith "Not implemented"
 
@@ -197,12 +205,12 @@ let deduct_anti_sym ((gamma, p, _) as thm_p) ((delta, q, _) as thm_q) =
   let pq = Term.eq p q in
   define_thm "deductAntiSym" (gamma_delta, pq, DeductAntiSym(thm_p, thm_q))
 
-(* TODO *)
-
-let eq_mp (gamma, p, _) (delta, pq, _) =
+let eq_mp ((gamma, p, _) as thm_p) ((delta, pq, _) as thm_pq) =
   let p', q = Term.get_eq pq in
   if Term.compare p p' <> 0 then failwith "eq_mp : terms must be alpha-equivalent";
-  declare_axiom (TermSet.union gamma delta, q)
+  define_thm "eqMp" (TermSet.union gamma delta, q, EqMp(thm_p, thm_pq))
+
+(* TODO *)
 
 let beta_conv x t u =
   declare_axiom (TermSet.empty, Term.eq (Term.app (Term.lam x t) u) (Term.subst [x, u] t))
