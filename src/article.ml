@@ -4,16 +4,14 @@
     This code is inspired by the import code of HOL Light:
     http://src.gilith.com/hol-light.html *)
 
-type thm = Thm.thm
-
 (** The objects and stack of the virtual machine. *)
 type stack_object =
   | Name of string
   | Num of int
   | List of stack_object list
-  | TypeOp of string
+  | TypeOp of Type.op
   | Type of Type.hol_type
-  | Const of string
+  | Const of Term.cst
   | Var of Term.var
   | Term of Term.term
   | Thm of Thm.thm
