@@ -47,4 +47,8 @@ EQ_MP : p : term bool -> q : term bool ->
   proof (eq bool p q) ->
   proof p ->
   proof q.
+BETA_CONV : a : type -> b : type -> f : (term a -> term b) -> u : term a ->
+  proof (eq b (f u) (f u)) :=
+    a : type => b : type => f : (term a -> term b) => u : term a =>
+    REFL b (f u).
 
