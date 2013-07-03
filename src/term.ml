@@ -2,14 +2,14 @@
     The translation of the datatypes uses sharing, which is handled by smart
     constructors. *)
 
-type var = string
+type var = string * Type.hol_type
 
 type cst = string
 
 type term =
-  | Var of var * Type.hol_type
+  | Var of var
   | Cst of cst * Type.hol_type
-  | Lam of var * Type.hol_type * term
+  | Lam of var * term
   | App of term * term
 
 (** Type schemes of the declared constants. *)
@@ -22,51 +22,49 @@ let csts = ref [
 
 let is_declared c = List.mem_assoc c !csts
 
-(** Computes the type of [a], assuming it is well typed. *)
+(** Compute the type of [a], assuming it is well typed. *)
 let rec type_of a =
   match a with
-  | Var(x, a) -> a
+  | Var((x, a)) -> a
   | Cst(c, a) -> a
-  | Lam(x, a, b) -> Type.arr a (type_of b)
+  | Lam((x, a), b) -> Type.arr a (type_of b)
   | App(t, u) -> let a, b = Type.get_arr (type_of t) in b
-
-(** Free variables *)
 
 let rec free_type_vars ftv a =
   match a with
-  | Var(x, a) -> Type.free_vars ftv a
+  | Var((x, a)) -> Type.free_vars ftv a
   | Cst(c, a) -> Type.free_vars ftv a
-  | Lam(x, a, t) -> free_type_vars (Type.free_vars ftv a) t
+  | Lam((x, a), t) -> free_type_vars (Type.free_vars ftv a) t
   | App(t, u) -> free_type_vars (free_type_vars ftv t) u
 
 let free_vars fv a =
   let rec free_vars bound fv a =
     match a with
-    | Var(x, a) -> if List.mem (x, a) bound || List.mem (x, a) fv then fv else (x, a) :: fv
+    | Var(x) -> if List.mem x bound || List.mem x fv then fv else x :: fv
     | Cst(c, a) -> fv
-    | Lam(x, a, t) -> free_vars ((x, a) :: bound) fv t
+    | Lam(x, t) -> free_vars (x :: bound) fv t
     | App(t, u) -> free_vars bound (free_vars bound fv t) u
   in free_vars [] fv a
 
 type index =
   | Bound of int
-  | Free of var * Type.hol_type
+  | Free of var
 
-let index context (x, a) =
+let index context x =
   let rec index i context =
     match context with
-    | [] -> Free(x, a)
-    | (y, b) :: context ->
-      if (x, a) = (y, b) then Bound(i)
+    | [] -> Free(x)
+    | y :: context ->
+      if x = y then Bound(i)
       else index (i + 1) context
   in index 0 context
 
 let alpha_equiv t u =
   let rec alpha_equiv bindings_t bindings_u t u =
     match t, u with
-    | Var(x, a), Var(y, b) -> a = b && (index bindings_t (x, a) = index bindings_u (y, b))
+    | Var(x), Var(y) -> index bindings_t x = index bindings_u y
     | Cst(c, a), Cst(d, b) -> a = b && c = d
-    | Lam(x, a, t), Lam(y, b, u) -> a = b && (alpha_equiv ((x, a) :: bindings_t) ((y, b) :: bindings_u) t u)
+    | Lam((x, a), t), Lam((y, b), u) -> a = b && (alpha_equiv ((x, a) :: bindings_t) ((y, b) :: bindings_u) t u)
     | App(t1, t2), App(u1, u2) -> (alpha_equiv bindings_t bindings_u t1 u1) && (alpha_equiv bindings_t bindings_u t2 u2)
     | _ -> false
   in alpha_equiv [] [] t u
@@ -111,8 +109,8 @@ let rec translate_term t =
     Dedukti.apps (Dedukti.apps id' ftv') fv'
   with Not_found ->
     match t with
-    | Var(x, a) ->
-      Dedukti.var (translate_var (x, a))
+    | Var(x) ->
+      Dedukti.var (translate_var x)
     | Cst(c, a) ->
       let b = List.assoc c !csts in
       let ftv = Type.free_vars [] b in
@@ -120,7 +118,7 @@ let rec translate_term t =
       let c' = Dedukti.var (translate_cst c) in
       let theta' = List.map (fun x -> Type.translate_type (List.assoc x theta)) ftv in
       Dedukti.apps c' theta'
-    | Lam(x, a, t) ->
+    | Lam((x, a), t) ->
       let x' = translate_var (x, a) in
       let a' = translate_type a in
       let t' = translate_term t in
@@ -162,7 +160,7 @@ let define_term t =
 
 (** Smart constructors *)
 
-let var x a = Var(x, a)
+let var x = Var(x)
 
 let cst c a =
   (* Check first if the constant is declared. *)
@@ -172,7 +170,7 @@ let cst c a =
     declare_cst c (Type.var "A"));
   define_term (Cst(c, a))
 
-let lam x a t = define_term (Lam(x, a, t))
+let lam x t = define_term (Lam(x, t))
 
 let app t u = define_term (App(t, u))
 
@@ -198,15 +196,18 @@ let get_select t =
 
 let rec type_subst theta t =
   match t with
-  | Var(x, a) -> var x (Type.subst theta a)
+  | Var((x, a)) -> var (x, (Type.subst theta a))
   | Cst(c, a) -> cst c (Type.subst theta a)
-  | Lam(x, a, t) -> lam x (Type.subst theta a) (type_subst theta t)
+  | Lam((x, a), t) -> lam (x, (Type.subst theta a)) (type_subst theta t)
   | App(t, u) -> app (type_subst theta t) (type_subst theta u)
 
 (** Return a variant of the variable [x] of type [a] which does not appear in
     the list of variables [avoid]. *)
-let rec variant (x, a) avoid =
-  if not (List.mem (x, a) avoid) then x else variant (x ^ "_", a) avoid
+let variant (x, a) avoid =
+  let rec variant n =
+    let y = Printf.sprintf "%s_%d" x n in
+    if List.mem (y, a) avoid then variant (n + 1) else (y, a) in
+  if List.mem (x, a) avoid then variant 1 else (x, a)
 
 (** Capture-avoiding term substitution. The substitution must be given as
     a list of the form [(x1, a1), u1; ...; (xn, an), un]. *)
@@ -214,15 +215,15 @@ let subst sigma t =
   let fv = List.fold_left free_vars (free_vars [] t) (snd (List.split sigma)) in
   let rec subst fv sigma t =
     match t with
-    | Var(x, a) ->
-      begin try List.assoc (x, a) sigma
+    | Var(x) ->
+      begin try List.assoc x sigma
         with Not_found -> t end
     | Cst(_) -> t
-    | Lam(x, a, t) ->
-      let x' = variant (x, a) fv in
-      let sigma' = ((x, a), var x' a) :: sigma in
-      let fv' = (x', a) :: fv in
-      lam x' a (subst fv' sigma' t)
+    | Lam(x, t) ->
+      let x' = variant x fv in
+      let sigma' = (x, var x') :: sigma in
+      let fv' = x' :: fv in
+      lam x' (subst fv' sigma' t)
     | App(t, u) -> app (subst fv sigma t) (subst fv sigma u)
   in subst fv sigma t
 

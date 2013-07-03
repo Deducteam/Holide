@@ -7,13 +7,13 @@ type thm = Term.term list * Term.term * proof
 and proof =
   | Axiom of axm
   | Refl of Term.term
-  | AbsThm of Term.var * Type.hol_type * thm
+  | AbsThm of Term.var * thm
   | AppThm of thm * thm
   | Assume of Term.term
   | DeductAntiSym of thm * thm
   | EqMp of thm * thm
-  | BetaConv of Term.var * Type.hol_type * Term.term
-  | Subst of ((Term.var * Type.hol_type) * Term.term) list * thm
+  | BetaConv of Term.var * Term.term
+  | Subst of (Term.var * Term.term) list * thm
   | TypeSubst of (Type.var * Type.hol_type) list * thm
   | DefineConst of Term.cst * Term.term
 
@@ -75,15 +75,15 @@ let rec translate_thm ((gamma, p, proof) as thm) =
       let t' = Term.translate_term t in
       Dedukti.apps refl' [a'; t']
 
-    | AbsThm(x, a, ((_, tu, _) as thm_tu)) ->
+    | AbsThm((x, a), ((_, tu, _) as thm_tu)) ->
       let t, u = Term.get_eq tu in
       let b = Term.type_of t in
       let abs_thm' = Dedukti.var (Name.hol "ABS_THM") in
       let a' = Type.translate_type a in
       let b' = Type.translate_type b in
       let x' = Term.translate_var (x, a) in
-      let t' = Term.translate_term (Term.lam x a t) in
-      let u' = Term.translate_term (Term.lam x a u) in
+      let t' = Term.translate_term (Term.lam (x, a) t) in
+      let u' = Term.translate_term (Term.lam (x, a) u) in
       let thm_tu' = Dedukti.lam (x', Term.translate_type a) (translate_thm thm_tu) in
       Dedukti.apps abs_thm' [a'; b'; t'; u'; thm_tu']
 
@@ -160,9 +160,9 @@ let axiom gamma p =
 let refl t =
   define_thm "refl" ([], Term.eq t t, Refl(t))
 
-let abs_thm x a ((gamma, tu, _) as thm_tu) =
+let abs_thm x ((gamma, tu, _) as thm_tu) =
   let t, u = Term.get_eq tu in
-  define_thm "absThm" (gamma, Term.eq (Term.lam x a t) (Term.lam x a u), AbsThm(x, a, thm_tu))
+  define_thm "absThm" (gamma, Term.eq (Term.lam x t) (Term.lam x u), AbsThm(x, thm_tu))
 
 let app_thm ((gamma, fg, _) as thm_fg) ((delta, tu, _) as thm_tu) =
   let f, g = Term.get_eq fg in
@@ -185,9 +185,9 @@ let eq_mp (gamma, p, _) (delta, pq, _) =
   let p = q in
   declare_axiom (gamma, p)
 
-let beta_conv x a t u =
+let beta_conv x t u =
   let gamma = [] in
-  let p = Term.eq (Term.app (Term.lam x a t) u) (Term.subst [(x, a), u] t) in
+  let p = Term.eq (Term.app (Term.lam x t) u) (Term.subst [x, u] t) in
   declare_axiom (gamma, p)
 
 let subst sigma (gamma, p, _) =

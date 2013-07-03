@@ -14,7 +14,7 @@ type stack_object =
   | TypeOp of string
   | Type of Type.hol_type
   | Const of string
-  | Var of string * Type.hol_type
+  | Var of Term.var
   | Term of Term.term
   | Thm of Thm.thm
 
@@ -61,8 +61,8 @@ let process_command cmd stack =
       (*  let _ = Output.print_verbose "Processing %s\n%!" cmd in*)
       (*  let _ = Output.print_comment cmd in*)
       match cmd, stack with
-      | "absTerm", Term(t) :: Var(x, a) :: stack -> Term(Term.lam x a t) :: stack
-      | "absThm", Thm(thm_tu) :: Var(x, a) :: stack -> Thm(Thm.abs_thm x a thm_tu) :: stack
+      | "absTerm", Term(t) :: Var(x) :: stack -> Term(Term.lam x t) :: stack
+      | "absThm", Thm(thm_tu) :: Var(x) :: stack -> Thm(Thm.abs_thm x thm_tu) :: stack
       | "appTerm", Term(u) :: Term(t) :: stack -> Term(Term.app t u) :: stack
       | "appThm", Thm(thm_tu) :: Thm(thm_fg) :: stack -> Thm(Thm.app_thm thm_fg thm_tu) :: stack
       | "assume", Term(p) :: stack -> Thm(Thm.assume p) :: stack
@@ -73,7 +73,7 @@ let process_command cmd stack =
           | _ -> failwith "not a term object" in
         let gamma = List.map extract_term gamma in
         Thm(Thm.axiom gamma p) :: stack
-      | "betaConv", Term(Term.App(Term.Lam(x, a, t), u)) :: stack -> Thm(Thm.beta_conv x a t u) :: stack
+      | "betaConv", Term(Term.App(Term.Lam(x, t), u)) :: stack -> Thm(Thm.beta_conv x t u) :: stack
       | "cons", List(tail) :: head :: stack -> List(head :: tail) :: stack
       | "const", Name(name) :: stack -> Const(name) :: stack
       | "constTerm", Type(a) :: Const(c) :: stack -> Term(Term.cst c a) :: stack
@@ -126,8 +126,8 @@ let process_command cmd stack =
         let _ = Thm.thm thm in
         stack
       | "typeOp", Name(op) :: stack -> TypeOp(op) :: stack
-      | "var", Type(a) :: Name(x) :: stack -> Var(x, a) :: stack
-      | "varTerm", Var(x, a) :: stack -> Term(Term.var x a) :: stack
+      | "var", Type(a) :: Name(x) :: stack -> Var((x, a)) :: stack
+      | "varTerm", Var(x) :: stack -> Term(Term.var x) :: stack
       | "varType", Name(x) :: stack -> Type(Type.var x) :: stack
       | _ -> failwith "invalid command/state"
 
