@@ -12,6 +12,9 @@ type term =
   | Lam of var * term
   | App of term * term
 
+(** Type alias to satisfy the OrderedType interface used by sets and maps. *)
+type t = term
+
 (** Type schemes of the declared constants. *)
 (* Cannot use the smart constructors because the output environment has not
     been setup yet. *)
@@ -46,10 +49,12 @@ let free_vars fv a =
     | App(t, u) -> free_vars bound (free_vars bound fv t) u
   in free_vars [] fv a
 
+(** Type to represent the index of bound and free variables. *)
 type index =
   | Bound of int
   | Free of var
 
+(** Return the index of the variable [x] in the binding context. *)
 let index context x =
   let rec index i context =
     match context with
@@ -59,15 +64,21 @@ let index context x =
       else index (i + 1) context
   in index 0 context
 
-let alpha_equiv t u =
-  let rec alpha_equiv bindings_t bindings_u t u =
+(** Alpha-equivalence-aware total ordering function. *)
+let compare t u =
+  (* Lexicographical ordering *)
+  let lex f a b g c d = let cmp = f a b in if cmp <> 0 then cmp else g c d in
+  let rec compare bindings_t bindings_u t u =
     match t, u with
-    | Var(x), Var(y) -> index bindings_t x = index bindings_u y
-    | Cst(c, a), Cst(d, b) -> a = b && c = d
-    | Lam((x, a), t), Lam((y, b), u) -> a = b && (alpha_equiv ((x, a) :: bindings_t) ((y, b) :: bindings_u) t u)
-    | App(t1, t2), App(u1, u2) -> (alpha_equiv bindings_t bindings_u t1 u1) && (alpha_equiv bindings_t bindings_u t2 u2)
-    | _ -> false
-  in alpha_equiv [] [] t u
+    | Var(x), Var(y) -> Pervasives.compare (index bindings_t x) (index bindings_u y)
+    | Cst(c, a), Cst(d, b) -> lex Pervasives.compare c d Pervasives.compare a b
+    | Lam((x, a), t), Lam((y, b), u) -> lex Pervasives.compare a b (compare ((x, a) :: bindings_t) ((y, b) :: bindings_u)) t u
+    | App(t1, t2), App(u1, u2) -> lex (compare bindings_t bindings_u) t1 u1 (compare bindings_t bindings_u) t2 u2
+    | _ -> Pervasives.compare t u
+  in compare [] [] t u
+
+let alpha_equiv t u =
+  compare t u = 0
 
 (** Translation *)
 
