@@ -28,10 +28,10 @@ let is_declared op = List.mem_assoc op !ops
 
 (** Free variables *)
 
-let rec free_vars xs a =
+let rec free_vars fv a =
   match a with
-  | Var(x) -> if List.mem x xs then xs else x :: xs
-  | App(op, args) -> List.fold_left free_vars xs args
+  | Var(x) -> if List.mem x fv then fv else x :: fv
+  | App(op, args) -> List.fold_left free_vars fv args
 
 (** Translation *)
 
@@ -55,10 +55,10 @@ let translate_kind arity =
 let rec translate_type a =
   try
     let id = TypeSharing.find a in
-    let xs = free_vars [] a in
+    let fv = free_vars [] a in
     let id' = Dedukti.var (translate_type_id id) in
-    let xs' = List.map Dedukti.var (List.map translate_var xs) in
-    Dedukti.apps id' xs'
+    let fv' = List.map Dedukti.var (List.map translate_var fv) in
+    Dedukti.apps id' fv'
   with Not_found ->
     match a with
     | Var(x) ->
@@ -69,8 +69,8 @@ let rec translate_type a =
       Dedukti.apps op' args'
 
 (** Translate the list of type variables [x1; ...; xn]
-    into the dedukti context [x1 : type; ...; xn : type] *)
-let translate_vars_context vars =
+    into the Dedukti terms [x1 : type; ...; xn : type] *)
+let translate_vars vars =
   List.map (fun x -> (translate_var x, translate_kind 0)) vars
 
 (** Declare the Dedukti term [op : |arity|]. *)
@@ -84,10 +84,10 @@ let declare_op op arity =
 (** Define the Dedukti term [id := |a|]. *)
 let define_type a =
   let _ = if not (TypeSharing.mem a) then (
-      let xs = free_vars [] a in
-      let xs' = translate_vars_context xs in
-      let arity' = translate_kind (List.length xs) in
-      let a' = Dedukti.lams xs' (translate_type a) in
+      let fv = free_vars [] a in
+      let fv' = translate_vars fv in
+      let arity' = translate_kind (List.length fv) in
+      let a' = Dedukti.lams fv' (translate_type a) in
       let id = (TypeSharing.add a) in
       let id' = translate_type_id id in
       Output.print_definition false id' arity' a')

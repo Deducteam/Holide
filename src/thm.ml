@@ -132,7 +132,7 @@ let declare_axiom (gamma, p) =
   let _ = if not (ThmSharing.mem thm) then (
       let ftv = List.fold_left Term.free_type_vars [] (p :: (TermSet.elements gamma)) in
       let fv = List.fold_left Term.free_vars [] (p :: (TermSet.elements gamma)) in
-      let ftv' = Type.translate_vars_context ftv in
+      let ftv' = Type.translate_vars ftv in
       let fv' = Term.translate_vars_context fv in
       let gamma' = translate_hyps_context gamma in
       let p' = Dedukti.pies ftv' (Dedukti.pies fv' (Dedukti.pies gamma' (translate_prop p))) in
@@ -146,7 +146,7 @@ let define_thm comment ((gamma, p, _) as thm) =
   let _ = if not (ThmSharing.mem thm) then (
       let ftv = free_type_vars thm in
       let fv = free_vars thm in
-      let ftv' = Type.translate_vars_context ftv in
+      let ftv' = Type.translate_vars ftv in
       let fv' = Term.translate_vars_context fv in
       let gamma' = translate_hyps_context gamma in
       let p' = Dedukti.pies ftv' (Dedukti.pies fv' (Dedukti.pies gamma' (translate_prop p))) in
@@ -175,8 +175,6 @@ let app_thm ((gamma, fg, _) as thm_fg) ((delta, tu, _) as thm_tu) =
   let t, u = Term.get_eq tu in
   define_thm  "appThm" (TermSet.union gamma delta, Term.eq (Term.app f t) (Term.app g u), AppThm(thm_fg, thm_tu))
 
-(* TODO *)
-
 let assume p =
   check_prop p;
   (TermSet.singleton p, p, Assume(p))
@@ -185,6 +183,8 @@ let deduct_anti_sym ((gamma, p, _) as thm_p) ((delta, q, _) as thm_q) =
   let gamma_delta = TermSet.union (TermSet.remove q gamma) (TermSet.remove p delta) in
   let pq = Term.eq p q in
   define_thm "deductAntiSym" (gamma_delta, pq, DeductAntiSym(thm_p, thm_q))
+
+(* TODO *)
 
 let eq_mp (gamma, p, _) (delta, pq, _) =
   let p', q = Term.get_eq pq in

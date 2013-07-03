@@ -149,7 +149,7 @@ let declare_cst c a =
   Output.print_verbose "Declaring constant %s\n%!" c;
   let ftv = Type.free_vars [] a in
   let c' = translate_cst c in  
-  let ftv' = Type.translate_vars_context ftv in
+  let ftv' = Type.translate_vars ftv in
   let a' = Dedukti.pies ftv' (translate_type a) in
   Output.print_declaration c' a';
   csts := (c, a) :: !csts
@@ -160,7 +160,7 @@ let define_term t =
       let a = type_of t in
       let ftv = free_type_vars [] t in
       let fv = free_vars [] t in  
-      let ftv' = Type.translate_vars_context ftv in
+      let ftv' = Type.translate_vars ftv in
       let fv' = translate_vars_context fv in
       let a' = Dedukti.pies ftv' (Dedukti.pies fv' (translate_type a)) in
       let t' = Dedukti.lams ftv' (Dedukti.lams fv' (translate_term t)) in
