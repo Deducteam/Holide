@@ -25,9 +25,8 @@ and proof =
   | Assume of Term.term
   | DeductAntiSym of thm * thm
   | EqMp of thm * thm
-  | BetaConv of Term.var * Term.term
-  | TypeSubst of (Type.var * Type.hol_type) list * thm
-  | TermSubst of (Term.var * Term.term) list * thm
+  | BetaConv of Term.var * Term.term * Term.term
+  | Subst of (Type.var * Type.hol_type) list * (Term.var * Term.term) list * thm
   | DefineConst of Term.cst * Term.term
 
 module ThmSharing = Sharing.Make(
@@ -62,6 +61,18 @@ let translate_hyp context p =
 (** Translate a HOL proposition as a Dedukti type. *)
 let translate_prop term_context p =
   Dedukti.app (Dedukti.var (Name.hol "proof")) (Term.translate_term term_context p)
+
+(** Translate the list of hypotheses [p1; ...; pn]
+    into the Dedukti terms [x1 : ||p1||; ...; xn : ||pn||] *)
+let rec translate_hyps term_context context hyps =
+  match hyps with
+  | [] -> []
+  | p :: hyps ->
+      let x' = translate_hyp (p :: context) p in
+      let p' = translate_prop term_context p in
+      let hyps' = translate_hyps term_context (p :: context) hyps in
+      (x', p') :: hyps'
+
 
 (** Translate the HOL theorem [thm] as a Dedukti term. *)
 let rec translate_thm term_context context ((gamma, p, proof) as thm) =
@@ -126,26 +137,42 @@ let rec translate_thm term_context context ((gamma, p, proof) as thm) =
       let thm_q' = Dedukti.lam (hp', translate_prop term_context p) (translate_thm term_context (p :: context) thm_q) in
       Dedukti.apps prop_ext' [p'; q'; thm_p'; thm_q']
     
-    | EqMp(((_, p, _) as thm_p), ((_, q, _) as thm_pq)) ->
+    | EqMp(((_, pq, _) as thm_pq), ((_, p, _) as thm_p)) ->
+      let _, q = Term.get_eq pq in
       let eq_mp' = Dedukti.var (Name.hol "EQ_MP") in
       let p' = Term.translate_term term_context p in
       let q' = Term.translate_term term_context q in
       let thm_p' = translate_thm term_context context thm_p in
       let thm_pq' = translate_thm term_context context thm_pq in
-      Dedukti.apps eq_mp' [p'; q'; thm_p'; thm_pq']
+      Dedukti.apps eq_mp' [p'; q'; thm_pq'; thm_p']
+    
+    | BetaConv((x, a), t, u) ->
+      let b = Term.type_of t in
+      let beta_conv' = Dedukti.var (Name.hol "BETA_CONV") in
+      let a' = Type.translate_type a in
+      let b' = Type.translate_type b in
+      let x' = Term.translate_var ((x, a) :: term_context) (x, a) in
+      let xt' = Dedukti.lam (x', Term.translate_type a) (Term.translate_term ((x, a) :: term_context) t) in
+      let u' = Term.translate_term term_context u in
+      Dedukti.apps beta_conv' [a'; b'; xt'; u']
+
+    | Subst(theta, sigma, ((gamma, p, _) as thm_p)) ->
+      (* First abstract the proof of p *)
+      let ftv = free_type_vars thm_p in
+      let fv = free_vars thm_p in
+      let ftv' = Type.translate_vars (List.rev ftv) in
+      let fv' = Term.translate_vars [] (List.rev fv) in
+      let gamma' = translate_hyps fv [] (List.rev (TermSet.elements gamma)) in
+      let thm' = Dedukti.lams ftv' (Dedukti.lams fv' (Dedukti.lams gamma' (translate_thm fv (TermSet.elements gamma) thm_p))) in
+      (* Then apply to instantiate *)
+      let type_subst a = Type.subst theta a in
+      let term_subst t = Term.subst sigma (Term.type_subst theta t) in
+      let ftv' = List.map (fun x -> Type.translate_type (type_subst (Type.var x))) (List.rev ftv) in
+      let fv' = List.map (fun x -> Term.translate_term term_context (term_subst (Term.var x))) (List.rev fv) in
+      let gamma' = List.map (fun p -> Dedukti.var (translate_hyp context p)) (List.map term_subst (List.rev (TermSet.elements gamma))) in
+      Dedukti.apps (Dedukti.apps (Dedukti.apps thm' ftv') fv') gamma'
 
     | _ -> failwith "Not implemented"
-
-(** Translate the list of hypotheses [p1; ...; pn]
-    into the Dedukti terms [x1 : ||p1||; ...; xn : ||pn||] *)
-let rec translate_hyps term_context context hyps =
-  match hyps with
-  | [] -> []
-  | p :: hyps ->
-      let x' = translate_hyp (p :: context) p in
-      let p' = translate_prop term_context p in
-      let hyps' = translate_hyps term_context (p :: context) hyps in
-      (x', p') :: hyps'
 
 (** Declare the axiom [gamma |- p] **)
 let declare_axiom (gamma, p) =
@@ -164,7 +191,7 @@ let declare_axiom (gamma, p) =
 
 (** Define the theorem [id := thm] *)
 let define_thm comment ((gamma, p, _) as thm) =
-  let _ = if not (ThmSharing.mem thm) && false then (
+  let _ = if not (ThmSharing.mem thm) then (
       let ftv = free_type_vars thm in
       let fv = free_vars thm in
       let ftv' = Type.translate_vars (List.rev ftv) in
@@ -205,21 +232,19 @@ let deduct_anti_sym ((gamma, p, _) as thm_p) ((delta, q, _) as thm_q) =
   let pq = Term.eq p q in
   define_thm "deductAntiSym" (gamma_delta, pq, DeductAntiSym(thm_p, thm_q))
 
-let eq_mp ((gamma, p, _) as thm_p) ((delta, pq, _) as thm_pq) =
+let eq_mp ((gamma, pq, _) as thm_pq) ((delta, p, _) as thm_p) =
   let p', q = Term.get_eq pq in
   if Term.compare p p' <> 0 then failwith "eq_mp : terms must be alpha-equivalent";
-  define_thm "eqMp" (TermSet.union gamma delta, q, EqMp(thm_p, thm_pq))
-
-(* TODO *)
+  define_thm "eqMp" (TermSet.union gamma delta, q, EqMp(thm_pq, thm_p))
 
 let beta_conv x t u =
-  declare_axiom (TermSet.empty, Term.eq (Term.app (Term.lam x t) u) (Term.subst [x, u] t))
+  define_thm "betaConv" (TermSet.empty, Term.eq (Term.app (Term.lam x t) u) (Term.subst [x, u] t), BetaConv(x, t, u))
 
-let type_subst theta (gamma, p, _) =
-  declare_axiom (TermSet.map (Term.type_subst theta) gamma, Term.type_subst theta p)
+let subst theta sigma ((gamma, p, _) as thm_p) =
+  let s t = Term.subst sigma (Term.type_subst theta t) in
+  define_thm "subst" (TermSet.map s gamma, s p, Subst(theta, sigma, thm_p))
 
-let term_subst sigma (gamma, p, _) =
-  declare_axiom (TermSet.map (Term.subst sigma) gamma, Term.subst sigma p)
+(* TODO *)
 
 let define_const c t =
   if Term.free_vars [] t <> [] then failwith "constant definition contains free variables";

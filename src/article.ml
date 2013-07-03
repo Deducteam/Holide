@@ -87,7 +87,7 @@ let process_command cmd stack =
         let _ = List.map extract_name type_vars in
         let abs_rep, rep_abs = Thm.define_type_op op abs rep pt in
         Thm(rep_abs) :: Thm(abs_rep) :: Const(rep) :: Const(abs) :: TypeOp(op) :: stack
-      | "eqMp", Thm(thm_p) :: Thm(thm_pq) :: stack -> Thm(Thm.eq_mp thm_p thm_pq) :: stack
+      | "eqMp", Thm(thm_p) :: Thm(thm_pq) :: stack -> Thm(Thm.eq_mp thm_pq thm_p) :: stack
       | "nil", stack -> List([]) :: stack
       | "opType", List(args) :: TypeOp(type_op) :: stack ->
         let extract_type obj =
@@ -114,7 +114,7 @@ let process_command cmd stack =
           | _ -> failwith "not a term substitution" in
         let theta = List.map extract_type_subst theta in
         let sigma = List.map extract_term_subst sigma in
-        Thm(Thm.term_subst sigma (Thm.type_subst theta thm)) :: stack
+        Thm(Thm.subst theta sigma thm) :: stack
       | "thm", Term(p) :: List(qs) :: Thm(thm) :: stack ->
         let extract_term obj =
           match obj with
