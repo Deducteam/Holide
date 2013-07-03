@@ -117,10 +117,18 @@ let rec translate_vars context vars =
   match vars with
   | [] -> []
   | (x, a) :: vars ->
-      let x' = translate_var ((x, a) :: context) (x, a) in
-      let a' = translate_type a in
-      let vars' = translate_vars ((x, a) :: context) vars in
-      (x', a') :: vars'
+    let x' = translate_var ((x, a) :: context) (x, a) in
+    let a' = translate_type a in
+    let vars' = translate_vars ((x, a) :: context) vars in
+    (x', a') :: vars'
+
+(* Sometimes the variable is not bound by the context, so we should be
+   eliminate it by replacing it with a witness for the type. *)
+let translate_var_term context (x, a) =
+  try Dedukti.var (translate_var context (x, a))
+  with UnboundVariable ->
+    Output.print_verbose "Eliminating unbound free variable\n";
+    Dedukti.app (Dedukti.var (Name.hol "witness")) (Type.translate_type (a))
 
 (** Translate the HOL term [t] as a Dedukti term. *)
 let rec translate_term context t =
@@ -129,19 +137,13 @@ let rec translate_term context t =
     let ftv = free_type_vars [] t in
     let fv = free_vars [] t in
     let id' = Dedukti.var (translate_id id) in
-    (* Sometimes the variable is not bound by the context, so we should be
-       eliminate it by replacing it with a witness for the type. *)
-    let translate_var_term context (x, a) =
-      try Dedukti.var (translate_var context (x, a))
-      with UnboundVariable ->
-        Dedukti.app (Dedukti.var (Name.hol "witness")) (Type.translate_type (a)) in
     let ftv' = List.map (fun x -> Dedukti.var (Type.translate_var x)) (List.rev ftv) in
     let fv' = List.map (translate_var_term context) (List.rev fv) in
     Dedukti.apps (Dedukti.apps id' ftv') fv'
   with Not_found ->
     match t with
     | Var(x) ->
-      Dedukti.var (translate_var context x)
+      translate_var_term context x
     | Cst(c, a) ->
       let b = List.assoc c !csts in
       let ftv = Type.free_vars [] b in
