@@ -1,11 +1,15 @@
 (** Name generation and handling. *)
 
 let is_alpha c =
-  (Char.code 'a' <= Char.code c && Char.code c <= Char.code 'z') ||
-  (Char.code 'A' <= Char.code c && Char.code c <= Char.code 'Z')
+  match c with
+  | 'a' .. 'z'
+  | 'A' .. 'Z' -> true
+  | _ -> false
 
 let is_numerical c =
-  Char.code '0' <= Char.code c && Char.code c <= Char.code '9'
+  match c with
+  | '0' .. '9' -> true
+  | _ -> false
 
 let is_alpha_numerical c =
   is_alpha c || is_numerical c
