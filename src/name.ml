@@ -32,5 +32,5 @@ let escape name =
 
 let hol name = Printf.sprintf "hol.%s" name
 
-let id prefix id = Printf.sprintf "%s_%d" prefix id
+let id prefix id = Printf.sprintf "%s_%d" (escape prefix) id
 
