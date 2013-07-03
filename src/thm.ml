@@ -1,8 +1,21 @@
 (** HOL Theorems *)
 
-type axm = Term.term list * Term.term
+module TermSet =
+struct
 
-type thm = Term.term list * Term.term * proof
+  include Set.Make(Term)
+  
+  let map f gamma =
+    fold (fun p gamma -> add (f p) gamma) gamma empty
+  
+  let of_list gamma =
+    List.fold_left (fun gamma p -> add p gamma) empty gamma
+
+end
+
+type axm = TermSet.t * Term.term
+
+type thm = TermSet.t * Term.term * proof
 
 and proof =
   | Axiom of axm
@@ -25,20 +38,10 @@ module ThmSharing = Sharing.Make(
   end)
 
 let free_type_vars (gamma, p, _) =
-  List.fold_left Term.free_type_vars [] (p :: gamma)
+  List.fold_left Term.free_type_vars [] (p :: TermSet.elements gamma)
 
 let free_vars (gamma, p, _) =
-  List.fold_left Term.free_vars [] (p :: gamma)
-
-let rec context_union gamma delta =
-  match gamma with
-  | [] -> delta
-  | p :: gamma ->
-    let union = context_union gamma delta in
-    if List.exists (Term.alpha_equiv p) union then union else p :: union
-
-let rec context_remove gamma p =
-  List.filter (fun q -> not (Term.alpha_equiv p q)) gamma
+  List.fold_left Term.free_vars [] (p :: TermSet.elements gamma)
 
 (** Translation *)
 
@@ -61,7 +64,7 @@ let rec translate_thm ((gamma, p, proof) as thm) =
     let id' = Dedukti.var (translate_id id) in
     let ftv' = List.map Dedukti.var (List.map Type.translate_var ftv) in
     let fv' = List.map Dedukti.var (List.map Term.translate_var fv) in
-    let gammas' = List.map Dedukti.var (List.map translate_hyp gamma) in
+    let gammas' = List.map Dedukti.var (List.map translate_hyp (TermSet.elements gamma)) in
     Dedukti.apps (Dedukti.apps (Dedukti.apps id' ftv') fv') gammas'
   with Not_found ->
     match proof with
@@ -115,17 +118,17 @@ let rec translate_thm ((gamma, p, proof) as thm) =
 
     | _ -> failwith "Not implemented"
 
-(** Translate the list of hypotheses [p1; ...; pn]
+(** Translate the set of hypotheses {p1; ...; pn}
     into the dedukti context [x1 : ||p1||; ...; xn : ||pn||] *)
 let translate_hyps_context hyps =
-  List.map (fun p -> (translate_hyp p, translate_prop p)) hyps
+  List.map (fun p -> (translate_hyp p, translate_prop p)) (TermSet.elements hyps)
 
 (** Declare the axiom [gamma |- p] **)
 let declare_axiom (gamma, p) =
   let thm = (gamma, p, Axiom(gamma, p)) in
   let _ = if not (ThmSharing.mem thm) then (
-      let ftv = List.fold_left Term.free_type_vars [] (p :: gamma) in
-      let fv = List.fold_left Term.free_vars [] (p :: gamma) in
+      let ftv = List.fold_left Term.free_type_vars [] (p :: (TermSet.elements gamma)) in
+      let fv = List.fold_left Term.free_vars [] (p :: (TermSet.elements gamma)) in
       let ftv' = Type.translate_vars_context ftv in
       let fv' = Term.translate_vars_context fv in
       let gamma' = translate_hyps_context gamma in
@@ -155,10 +158,10 @@ let define_thm comment ((gamma, p, _) as thm) =
 
 let axiom gamma p =
   Output.print_verbose "Declaring axiom\n%!";
-  declare_axiom (gamma, p)
+  declare_axiom (TermSet.of_list gamma, p)
 
 let refl t =
-  define_thm "refl" ([], Term.eq t t, Refl(t))
+  define_thm "refl" (TermSet.empty, Term.eq t t, Refl(t))
 
 let abs_thm x ((gamma, tu, _) as thm_tu) =
   let t, u = Term.get_eq tu in
@@ -167,37 +170,37 @@ let abs_thm x ((gamma, tu, _) as thm_tu) =
 let app_thm ((gamma, fg, _) as thm_fg) ((delta, tu, _) as thm_tu) =
   let f, g = Term.get_eq fg in
   let t, u = Term.get_eq tu in
-  define_thm  "appThm" (context_union gamma delta, Term.eq (Term.app f t) (Term.app g u), AppThm(thm_fg, thm_tu))
+  define_thm  "appThm" (TermSet.union gamma delta, Term.eq (Term.app f t) (Term.app g u), AppThm(thm_fg, thm_tu))
 
 (* TODO *)
 
 let assume p =
-  ([p], p, Assume(p))
+  (TermSet.singleton p, p, Assume(p))
 
 let deduct_anti_sym ((gamma, p, _) as thm_p) ((delta, q, _) as thm_q) =
-  let gamma_delta = context_union (context_remove gamma q) (context_remove delta p) in
+  let gamma_delta = TermSet.union (TermSet.remove q gamma) (TermSet.remove p delta) in
   let pq = Term.eq p q in
   define_thm "deductAntiSym" (gamma_delta, pq, DeductAntiSym(thm_p, thm_q))
 
 let eq_mp (gamma, p, _) (delta, pq, _) =
   let _, q = Term.get_eq pq in
-  let gamma = context_union gamma delta in
+  let gamma = TermSet.union gamma delta in
   let p = q in
   declare_axiom (gamma, p)
 
 let beta_conv x t u =
-  let gamma = [] in
+  let gamma = TermSet.empty in
   let p = Term.eq (Term.app (Term.lam x t) u) (Term.subst [x, u] t) in
   declare_axiom (gamma, p)
 
 let type_subst theta (gamma, p, _) =
   let p = Term.type_subst theta p in
-  let gamma = List.map (Term.type_subst theta) gamma in
+  let gamma = TermSet.map (Term.type_subst theta) gamma in
   declare_axiom (gamma, p)
 
 let term_subst sigma (gamma, p, _) =
   let p = Term.subst sigma p in
-  let gamma = List.map (Term.subst sigma) gamma in
+  let gamma = TermSet.map (Term.subst sigma) gamma in
   declare_axiom (gamma, p)
 
 let define_const c t =
@@ -206,7 +209,7 @@ let define_const c t =
   let a = Term.type_of t in
   Term.declare_cst c a;
   let p = Term.eq (Term.cst c a) t in
-  let gamma = [] in
+  let gamma = TermSet.empty in
   declare_axiom (gamma, p)
 
 let define_type_op op abs rep _ =
