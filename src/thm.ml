@@ -37,6 +37,9 @@ module ThmSharing = Sharing.Make(
     let hash = Hashtbl.hash
   end)
 
+let check_prop p =
+  if Term.type_of p <> Type.bool () then failwith "Axiom term must have type bool"
+
 let free_type_vars (gamma, p, _) =
   List.fold_left Term.free_type_vars [] (p :: TermSet.elements gamma)
 
@@ -157,7 +160,7 @@ let define_thm comment ((gamma, p, _) as thm) =
 (** Smart constructors *)
 
 let axiom gamma p =
-  Output.print_verbose "Declaring axiom\n%!";
+  List.iter check_prop (p :: gamma);
   declare_axiom (TermSet.of_list gamma, p)
 
 let refl t =
@@ -175,6 +178,7 @@ let app_thm ((gamma, fg, _) as thm_fg) ((delta, tu, _) as thm_tu) =
 (* TODO *)
 
 let assume p =
+  check_prop p;
   (TermSet.singleton p, p, Assume(p))
 
 let deduct_anti_sym ((gamma, p, _) as thm_p) ((delta, q, _) as thm_q) =
@@ -183,39 +187,30 @@ let deduct_anti_sym ((gamma, p, _) as thm_p) ((delta, q, _) as thm_q) =
   define_thm "deductAntiSym" (gamma_delta, pq, DeductAntiSym(thm_p, thm_q))
 
 let eq_mp (gamma, p, _) (delta, pq, _) =
-  let _, q = Term.get_eq pq in
-  let gamma = TermSet.union gamma delta in
-  let p = q in
-  declare_axiom (gamma, p)
+  let p', q = Term.get_eq pq in
+  if Term.compare p p' <> 0 then failwith "eq_mp : terms must be alpha-equivalent";
+  declare_axiom (TermSet.union gamma delta, q)
 
 let beta_conv x t u =
-  let gamma = TermSet.empty in
-  let p = Term.eq (Term.app (Term.lam x t) u) (Term.subst [x, u] t) in
-  declare_axiom (gamma, p)
+  declare_axiom (TermSet.empty, Term.eq (Term.app (Term.lam x t) u) (Term.subst [x, u] t))
 
 let type_subst theta (gamma, p, _) =
-  let p = Term.type_subst theta p in
-  let gamma = TermSet.map (Term.type_subst theta) gamma in
-  declare_axiom (gamma, p)
+  declare_axiom (TermSet.map (Term.type_subst theta) gamma, Term.type_subst theta p)
 
 let term_subst sigma (gamma, p, _) =
-  let p = Term.subst sigma p in
-  let gamma = TermSet.map (Term.subst sigma) gamma in
-  declare_axiom (gamma, p)
+  declare_axiom (TermSet.map (Term.subst sigma) gamma, Term.subst sigma p)
 
 let define_const c t =
-  if Term.free_vars [] t <> []
-  then failwith "constant definition contains free variables";
+  if Term.free_vars [] t <> [] then failwith "constant definition contains free variables";
   let a = Term.type_of t in
   Term.declare_cst c a;
-  let p = Term.eq (Term.cst c a) t in
-  let gamma = TermSet.empty in
-  declare_axiom (gamma, p)
+  declare_axiom (TermSet.empty, Term.eq (Term.cst c a) t)
 
 let define_type_op op abs rep _ =
   failwith "Not implemented"
 
-let thm gamma p thm =
-  Output.print_verbose "Declaring theorem\n%!";
+let thm gamma p ((delta, q, _) as thm) =
+  if Term.compare p q <> 0 then failwith "theorem conclusion must be alpha-equivalent";
+  if not (TermSet.subset delta (TermSet.of_list gamma)) then failwith "theorem hypotheses must be alpha-equivalent";
   define_thm "thm" thm
 
