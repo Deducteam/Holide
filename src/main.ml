@@ -8,6 +8,7 @@ let options = Arg.align [
     "--just-check", Arg.Set(Output.just_check), " Just check, do not translate";
     "-o", Arg.String(Output.set_output), "<file> Set output filename";
     "--quiet", Arg.Set(Output.quiet), " Suppress all information";
+    "--untyped-def", Arg.Set(Output.untyped_def), " Use untyped declarations";
     "--version", Arg.Unit(show_version), " Print version and exit";
   ]
 

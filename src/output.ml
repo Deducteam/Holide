@@ -10,6 +10,9 @@ let just_check = ref false
 (** Quiet mode option. *)
 let quiet = ref false
 
+(** Untyped definitions option. *)
+let untyped_def = ref false
+
 (** Set the output to [filename]. *)
 let set_output filename =
   output_file := filename;
@@ -28,14 +31,21 @@ let print_command command args =
   List.iter (Printf.fprintf !output_channel " %s") args;
   Printf.fprintf !output_channel "\n"
 
-(** Print the declaration ["x : a"]. *)
+(** Print the declaration [x : a]. *)
 let print_declaration x a =
   Printf.fprintf !output_channel "\n%s : %a.\n" x Dedukti.print_term a
 
-(** Print the definition ["x : a := b"].
-    If [opaque] is set to [true], the definition will be opaque. *)
-let print_definition opaque x a b =
-  if opaque
-  then Printf.fprintf !output_channel "\n{%s} : %a :=\n  %a.\n" x Dedukti.print_term a Dedukti.print_term b
-  else Printf.fprintf !output_channel "\n%s : %a :=\n  %a.\n" x Dedukti.print_term a Dedukti.print_term b
-
+(** Print the definition [x : a := b] or [x := b].
+    If [opaque] is set to [true], the definition will be opaque.
+    If [untyped] is set to true, the definition will be untyped. *)
+let print_definition ?(opaque=false) ?(untyped=false) x a b =
+  if !untyped_def && untyped
+  then (
+    if opaque
+    then Printf.fprintf !output_channel "\n{%s} :=\n  %a.\n" x Dedukti.print_term b
+    else Printf.fprintf !output_channel "\n%s :=\n  %a.\n" x Dedukti.print_term b)
+  else (
+    if opaque
+    then Printf.fprintf !output_channel "\n{%s} : %a :=\n  %a.\n" x Dedukti.print_term a Dedukti.print_term b
+    else Printf.fprintf !output_channel "\n%s : %a :=\n  %a.\n" x Dedukti.print_term a Dedukti.print_term b)
+    

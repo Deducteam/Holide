@@ -184,7 +184,7 @@ let define_term t =
       let t' = Dedukti.lams ftv' (Dedukti.lams fv' (translate_term fv t)) in
       let id = TermSharing.add t in
       let id' = translate_id id in
-      Output.print_definition false id' a' t');
+      Output.print_definition ~untyped:true id' a' t');
   t
 
 (** Smart constructors *)
@@ -253,6 +253,6 @@ let subst sigma t =
       let sigma' = (x, var x') :: sigma in
       let fv' = x' :: fv in
       lam x' (subst fv' sigma' t)
-    | App(t, u) -> app (subst fv sigma t) (subst fv sigma u)
-  in subst fv sigma t
+    | App(t, u) -> app (subst fv sigma t) (subst fv sigma u) in
+  subst fv sigma t
 

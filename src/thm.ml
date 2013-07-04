@@ -191,7 +191,7 @@ let declare_axiom comment (gamma, p) =
   thm
 
 (** Define the theorem [id := thm] *)
-let define_thm comment ((gamma, p, _) as thm) =
+let define_thm comment ?(untyped=false) ((gamma, p, _) as thm) =
   if not !Output.just_check && not (ThmSharing.mem thm) then (
       let ftv = free_type_vars thm in
       let fv = free_vars thm in
@@ -203,7 +203,7 @@ let define_thm comment ((gamma, p, _) as thm) =
       let id = ThmSharing.add thm in
       let id' = translate_id id in
       Output.print_comment comment;
-      Output.print_definition true id' p' thm');
+      Output.print_definition ~opaque:true ~untyped:untyped id' p' thm');
   thm
 
 (** Smart constructors *)

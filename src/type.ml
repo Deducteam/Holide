@@ -91,7 +91,7 @@ let define_type a =
       let a' = Dedukti.lams fv' (translate_type a) in
       let id = (TypeSharing.add a) in
       let id' = translate_type_id id in
-      Output.print_definition false id' arity' a');
+      Output.print_definition ~untyped:true id' arity' a');
   a
 
 (** Smart constructors *)

@@ -26,7 +26,7 @@ let dict_add k obj =
     match obj with
     | Type(a) -> Type(Type.define_type a)
     | Term(t) -> Term(Term.define_term t)
-    | Thm(thm) -> Thm(Thm.define_thm "dict" thm)
+    | Thm(thm) -> Thm(Thm.define_thm "dict" ~untyped:true thm)
     | _ -> obj in
   Hashtbl.add dict k obj
 
