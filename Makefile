@@ -1,6 +1,5 @@
 SHELL      = bash
 OCAMLBUILD = ocamlbuild
-METALIDE   = /home/aliassaf/metaocaml/metalide_no_meta/main.native
 OPENTHEORY = opentheory
 
 OPTIONS    = -classic-display
@@ -30,22 +29,22 @@ holide:
 	$(BUILD) main.native
 	ln -sf build/src/main.native holide
 
-test: holide dedukti/unit.dk
+test: holide twelf/unit.elf
 	$(BUILD) test.native --
-	cd dedukti && $(METALIDE) hol.dk unit.dk
+	cd twelf && ./twelf-check hol.elf unit.elf
 
-stdlib: $(STDLIB:%=dedukti/%.dk)
+stdlib: $(STDLIB:%=twelf/%.elf)
 
 clean:
 	$(BUILD) -clean
 	rm -rf holide
-	rm -f $(STDLIB:%=dedukti/%.dk)
+	rm -f $(STDLIB:%=twelf/%.elf)
 
 stat:
 	wc -l src/*.ml*
 
-dedukti/%.dk: holide opentheory/%.art
-	./holide opentheory/$*.art -o dedukti/$*.dk 
+twelf/%.elf: holide opentheory/%.art
+	./holide opentheory/$*.art -o twelf/$*.elf
 
 opentheory/%.art:
 	$(OPENTHEORY) install $*
