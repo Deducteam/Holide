@@ -164,16 +164,17 @@ let rec translate_term context t =
 (** Declare the term [c : a]. *)
 let declare_cst c a =
   Output.print_verbose "Declaring constant %s\n%!" c;
-  let ftv = Type.free_vars [] a in
-  let c' = translate_cst c in  
-  let ftv' = Type.translate_vars (List.rev ftv) in
-  let a' = Dedukti.pies ftv' (translate_type a) in
-  Output.print_declaration c' a';
+  if not !Output.just_check then (
+    let ftv = Type.free_vars [] a in
+    let c' = translate_cst c in  
+    let ftv' = Type.translate_vars (List.rev ftv) in
+    let a' = Dedukti.pies ftv' (translate_type a) in
+    Output.print_declaration c' a');
   csts := (c, a) :: !csts
 
 (** Define the term [id := t]. *)
 let define_term t =
-  let _ = if not (TermSharing.mem t) then (
+  if not !Output.just_check && not (TermSharing.mem t) then (
       let a = type_of t in
       let ftv = free_type_vars [] t in
       let fv = free_vars [] t in  
@@ -183,8 +184,8 @@ let define_term t =
       let t' = Dedukti.lams ftv' (Dedukti.lams fv' (translate_term fv t)) in
       let id = TermSharing.add t in
       let id' = translate_id id in
-      Output.print_definition false id' a' t';)
-  in t
+      Output.print_definition false id' a' t');
+  t
 
 (** Smart constructors *)
 

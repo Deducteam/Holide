@@ -5,6 +5,7 @@ let show_version () =
   exit 0
 
 let options = Arg.align [
+    "--just-check", Arg.Set(Output.just_check), " Just check, do not translate";
     "-o", Arg.String(Output.set_output), "<file> Set output filename";
     "--quiet", Arg.Set(Output.quiet), " Suppress all information";
     "--version", Arg.Unit(show_version), " Print version and exit";
@@ -21,7 +22,7 @@ let () =
   Arg.parse options Input.set_input usage;
   if !Input.input_file = ""
   then fail ();
-  if !Output.output_file = ""
+  if !Output.output_file = "" && !Output.just_check
   then Output.set_output (Filename.chop_extension !Input.input_file ^ ".dk");
   Article.process_file ()
 

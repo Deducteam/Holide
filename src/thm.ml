@@ -177,7 +177,7 @@ let rec translate_thm term_context context ((gamma, p, proof) as thm) =
 (** Declare the axiom [gamma |- p] **)
 let declare_axiom comment (gamma, p) =
   let thm = (gamma, p, Axiom(gamma, p)) in
-  let _ = if not (ThmSharing.mem thm) then (
+  if not !Output.just_check && not (ThmSharing.mem thm) then (
       let ftv = List.fold_left Term.free_type_vars [] (p :: (TermSet.elements gamma)) in
       let fv = List.fold_left Term.free_vars [] (p :: (TermSet.elements gamma)) in
       let ftv' = Type.translate_vars (List.rev ftv) in
@@ -188,11 +188,11 @@ let declare_axiom comment (gamma, p) =
       let id' = translate_id id in
       Output.print_comment comment;
       Output.print_declaration id' p');
-  in thm
+  thm
 
 (** Define the theorem [id := thm] *)
 let define_thm comment ((gamma, p, _) as thm) =
-  let _ = if not (ThmSharing.mem thm) then (
+  if not !Output.just_check && not (ThmSharing.mem thm) then (
       let ftv = free_type_vars thm in
       let fv = free_vars thm in
       let ftv' = Type.translate_vars (List.rev ftv) in
@@ -203,8 +203,8 @@ let define_thm comment ((gamma, p, _) as thm) =
       let id = ThmSharing.add thm in
       let id' = translate_id id in
       Output.print_comment comment;
-      Output.print_definition true id' p' thm')
-  in thm
+      Output.print_definition true id' p' thm');
+  thm
 
 (** Smart constructors *)
 

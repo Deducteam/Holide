@@ -4,6 +4,9 @@ let output_file = ref ""
 
 let output_channel = ref stdout
 
+(** Just check option. *)
+let just_check = ref false
+
 (** Quiet mode option. *)
 let quiet = ref false
 

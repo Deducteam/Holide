@@ -18,7 +18,7 @@ let t3 = Term.lam y (Term.lam x (Term.var y))
 
 let t4 = Term.lam x (Term.subst [z, (Term.var x)] (Term.lam x (Term.var z)))
 
-let _ =
+let () =
   assert (Term.compare t1 t2 <> 0);
   assert (Term.compare t1 t3 <> 0);
   assert (Term.compare t2 t3 = 0);
