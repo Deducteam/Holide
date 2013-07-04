@@ -17,8 +17,8 @@ byte:
 
 test: native
 	$(OCAMLBUILD) $(OPTIONS) -libs $(LIBS) -Is $(INCLUDES) test.native --
-	holide opentheory/atomic/natural-exp-thm.art -o dedukti/atomic/natural-exp-thm.dk
-	cd dedukti && time camelide atomic/natural-exp-thm.dk
+	holide opentheory/bool.art -o dedukti/bool.dk
+	cd dedukti && time camelide bool.dk
 
 clean:
 	$(OCAMLBUILD) $(OPTIONS) -clean
