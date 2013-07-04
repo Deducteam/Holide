@@ -22,6 +22,12 @@ type stack = stack_object list
 let dict = Hashtbl.create 10007
 
 let dict_add k obj =
+  let obj =
+    match obj with
+    | Type(a) -> Type(Type.define_type a)
+    | Term(t) -> Term(Term.define_term t)
+    | Thm(thm) -> Thm(Thm.define_thm "dict" thm)
+    | _ -> obj in
   Hashtbl.add dict k obj
 
 let dict_find k =

@@ -213,16 +213,16 @@ let axiom gamma p =
   declare_axiom "axiom" (TermSet.of_list gamma, p)
 
 let refl t =
-  define_thm "refl" (TermSet.empty, Term.eq t t, Refl(t))
+  (TermSet.empty, Term.eq t t, Refl(t))
 
 let abs_thm x ((gamma, tu, _) as thm_tu) =
   let t, u = Term.get_eq tu in
-  define_thm "absThm" (gamma, Term.eq (Term.lam x t) (Term.lam x u), AbsThm(x, thm_tu))
+  (gamma, Term.eq (Term.lam x t) (Term.lam x u), AbsThm(x, thm_tu))
 
 let app_thm ((gamma, fg, _) as thm_fg) ((delta, tu, _) as thm_tu) =
   let f, g = Term.get_eq fg in
   let t, u = Term.get_eq tu in
-  define_thm  "appThm" (TermSet.union gamma delta, Term.eq (Term.app f t) (Term.app g u), AppThm(thm_fg, thm_tu))
+  (TermSet.union gamma delta, Term.eq (Term.app f t) (Term.app g u), AppThm(thm_fg, thm_tu))
 
 let assume p =
   check_prop p;
@@ -231,19 +231,19 @@ let assume p =
 let deduct_anti_sym ((gamma, p, _) as thm_p) ((delta, q, _) as thm_q) =
   let gamma_delta = TermSet.union (TermSet.remove q gamma) (TermSet.remove p delta) in
   let pq = Term.eq p q in
-  define_thm "deductAntiSym" (gamma_delta, pq, DeductAntiSym(thm_p, thm_q))
+  (gamma_delta, pq, DeductAntiSym(thm_p, thm_q))
 
 let eq_mp ((gamma, pq, _) as thm_pq) ((delta, p, _) as thm_p) =
   let p', q = Term.get_eq pq in
   if Term.compare p p' <> 0 then failwith "eq_mp : terms must be alpha-equivalent";
-  define_thm "eqMp" (TermSet.union gamma delta, q, EqMp(thm_pq, thm_p))
+  (TermSet.union gamma delta, q, EqMp(thm_pq, thm_p))
 
 let beta_conv x t u =
   define_thm "betaConv" (TermSet.empty, Term.eq (Term.app (Term.lam x t) u) (Term.subst [x, u] t), BetaConv(x, t, u))
 
 let subst theta sigma ((gamma, p, _) as thm_p) =
   let s t = Term.subst sigma (Term.type_subst theta t) in
-  define_thm "subst" (TermSet.map s gamma, s p, Subst(theta, sigma, thm_p))
+  (TermSet.map s gamma, s p, Subst(theta, sigma, thm_p))
 
 let define_const c t =
   if Term.free_vars [] t <> [] then failwith "constant definition contains free variables";

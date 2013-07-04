@@ -95,7 +95,6 @@ let define_type a =
 
 (** Smart constructors *)
 
-(* We don't need sharing for variables. *)
 let var x = Var(x)
 
 let app op args =
@@ -103,7 +102,7 @@ let app op args =
   if not (is_declared op) then (
     Output.print_verbose "Warning: using undeclared type operator %s\n%!" op;
     declare_op op (List.length args));
-  define_type (App(op, args))
+  (App(op, args))
 
 (* Use unit to avoid evaluation while the environment is not set up yet. *)
 let bool () = app "bool" []

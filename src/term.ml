@@ -196,11 +196,11 @@ let cst c a =
     Output.print_verbose "Warning: using undeclared constant %s\n%!" c;
     (* Cannot assume the time of [c] is [a], as it can be more general. *)
     declare_cst c (Type.var "A"));
-  define_term (Cst(c, a))
+  (Cst(c, a))
 
-let lam x t = define_term (Lam(x, t))
+let lam x t = (Lam(x, t))
 
-let app t u = define_term (App(t, u))
+let app t u = (App(t, u))
 
 let eq t u =
   let a = type_of t in
