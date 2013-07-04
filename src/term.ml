@@ -127,7 +127,7 @@ let rec translate_vars context vars =
 let translate_var_term context (x, a) =
   try Dedukti.var (translate_var context (x, a))
   with UnboundVariable ->
-    Output.print_verbose "Eliminating unbound free variable\n";
+(*    Output.print_verbose "Eliminating unbound free variable\n";*)
     Dedukti.app (Dedukti.var (Name.hol "witness")) (Type.translate_type (a))
 
 (** Translate the HOL term [t] as a Dedukti term. *)
