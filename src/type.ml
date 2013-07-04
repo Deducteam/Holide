@@ -48,7 +48,7 @@ let translate_op op =
 
 (** Translate a HOL kind as a Dedukti type. *)
 let translate_kind arity =
-  let k = Dedukti.var (Name.hol "type") in
+  let k = Dedukti.var (Name.hol "htype") in
   Dedukti.arrs (Array.to_list (Array.make arity k)) k
 
 (** Translate a HOL type as a Dedukti term. *)

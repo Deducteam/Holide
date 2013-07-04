@@ -160,7 +160,7 @@ let rec translate_thm term_context context ((gamma, p, proof) as thm) =
       Dedukti.apps beta_conv' [a'; b'; xt'; u']
 
     | Subst(theta, sigma, ((gamma, p, _) as thm_p)) ->
-      (* First abstract the proof of p *)
+(*      (* First abstract the proof of p *)*)
       let ftv = free_type_vars thm_p in
       let fv = free_vars thm_p in
       let ftv' = Type.translate_vars ftv in
