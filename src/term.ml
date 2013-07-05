@@ -152,14 +152,21 @@ let rec translate_term context t =
       let theta' = List.map (fun x -> Type.translate_type (List.assoc x theta)) ftv in
       Dedukti.apps c' theta'
     | Lam((x, a), t) ->
+      let b = type_of t in
+      let lam' = Dedukti.var (Name.hol "lam") in
+      let a' = Type.translate_type a in
+      let b' = Type.translate_type b in
       let x' = translate_var ((x, a) :: context) (x, a) in
-      let a' = translate_type a in
       let t' = translate_term ((x, a) :: context) t in
-      Dedukti.lam (x', a') t'
+      Dedukti.apps lam' [a'; b'; Dedukti.lam (x', translate_type a) t']
     | App(t, u) ->
+      let a, b = Type.get_arr (type_of t) in
+      let app' = Dedukti.var (Name.hol "app") in
+      let a' = Type.translate_type a in
+      let b' = Type.translate_type b in
       let t' = translate_term context t in
       let u' = translate_term context u in 
-      Dedukti.app t' u'
+      Dedukti.apps app' [a'; b'; t'; u']
 
 (** Declare the term [c : a]. *)
 let declare_cst c a =
