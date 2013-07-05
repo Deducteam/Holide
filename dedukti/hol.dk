@@ -15,14 +15,22 @@ arr  : type -> type -> type.
 (;-----------;)
 
 term : type -> Type.
-[a : type, b : type] term (arr a b) --> term a -> term b.
 
+lam : a : type -> b : type -> (term a -> term b) -> term (arr a b).
+app : a : type -> b : type -> term (arr a b) -> term a -> term b.
 eq : a : type -> term (arr a (arr a bool)).
 select : a : type -> term (arr (arr a bool) a).
+
+EQ : a : type -> term a -> term a -> term bool :=
+  a : type => x : term a => y : term a => app a bool (app a (arr a bool) (eq a) x) y.
+SELECT : a : type -> term (arr a bool) -> term a :=
+  a : type => p : term (arr a bool) => app (arr a bool) a (select a) p.
+
 true : term bool :=
-  eq (arr bool bool) (p : term bool => p) (p : term bool => p).
+  EQ (arr bool bool) (lam bool bool (p : term bool => p)) (lam bool bool (p : term bool => p)).
 witness : a : type -> term a :=
-  a : type => select a (x : term a => true).
+  a : type => SELECT a (lam a bool (x : term a => true)).
+
 
 (;------------;)
 (; HOL Proofs ;)
@@ -31,24 +39,22 @@ witness : a : type -> term a :=
 proof : term bool -> Type.
 
 REFL : a : type -> t : term a ->
-  proof (eq a t t).
+  proof (EQ a t t).
 ABS_THM : a : type -> b : type -> f : (term a -> term b) -> g : (term a -> term b) ->
-  (x : term a -> proof (eq b (f x) (g x))) ->
-  proof (eq (arr a b) f g).  
+  (x : term a -> proof (EQ b (f x) (g x))) ->
+  proof (EQ (arr a b) (lam a b f) (lam a b g)).
 APP_THM : a : type -> b : type -> f : term (arr a b) -> g : term (arr a b) -> x : term a -> y : term a ->
-  proof (eq (arr a b) f g) ->
-  proof (eq a x y) ->
-  proof (eq b (f x) (g y)).
+  proof (EQ (arr a b) f g) ->
+  proof (EQ a x y) ->
+  proof (EQ b (app a b f x) (app a b g y)).
 PROP_EXT : p : term bool -> q : term bool ->
   (proof q -> proof p) ->
   (proof p -> proof q) ->
-  proof (eq bool p q).
+  proof (EQ bool p q).
 EQ_MP : p : term bool -> q : term bool ->
-  proof (eq bool p q) ->
+  proof (EQ bool p q) ->
   proof p ->
   proof q.
-BETA_CONV : a : type -> b : type -> f : (term a -> term b) -> u : term a ->
-  proof (eq b (f u) (f u)) :=
-    a : type => b : type => f : (term a -> term b) => u : term a =>
-    REFL b (f u).
+BETA_CONV : a : type -> b : type -> f : (term a -> term b) -> x : term a ->
+  proof (EQ b (app a b (lam a b f) x) (f x)).
 
