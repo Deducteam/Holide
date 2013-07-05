@@ -23,7 +23,7 @@ let () =
   Arg.parse options Input.set_input usage;
   if !Input.input_file = ""
   then fail ();
-  if !Output.output_file = "" && !Output.just_check
+  if !Output.output_file = "" && not !Output.just_check
   then Output.set_output (Filename.chop_extension !Input.input_file ^ ".dk");
   Article.process_file ()
 
