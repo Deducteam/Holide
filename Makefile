@@ -1,6 +1,6 @@
 SHELL      = bash
 OCAMLBUILD = ocamlbuild
-DEDUKTI    = dkc
+METALIDE   = /home/aliassaf/metaocaml/metalide_no_meta/main.native
 OPENTHEORY = opentheory
 
 OPTIONS    = -classic-display
@@ -29,18 +29,16 @@ BUILD = $(OCAMLBUILD) \
 holide:
 	$(BUILD) main.native
 	ln -sf build/src/main.native holide
-	$(DEDUKTI) -o dedukti/hol.lua dedukti/hol.dk
 
 test: holide dedukti/unit.dk
 	$(BUILD) test.native --
-	cd dedukti && dkc unit.dk | lua -
+	cd dedukti && $(METALIDE) hol.dk unit.dk
 
 stdlib: $(STDLIB:%=dedukti/%.dk)
 
 clean:
 	$(BUILD) -clean
 	rm -rf holide
-	rm -f dedukti/hol.lua
 	rm -f $(STDLIB:%=dedukti/%.dk)
 
 stat:
