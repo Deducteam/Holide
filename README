@@ -32,8 +32,7 @@ logic, which is formalized in the file 'dedukti/hol.dk'
 
 There are many ways to obtain proofs in the OpenTheory format. If you have
 the opentheory tool installed, you can automatically export and translate the
-theories of the OpenTheory standard library using the commands
-'make packages' and 'make atomic'.
+theories of the OpenTheory standard library using 'make stdlib'.
 
 For more information on OpenTheory, visit:
 http://www.gilith.com/research/opentheory/
