@@ -245,7 +245,7 @@ let eq_mp ((gamma, pq, _) as thm_pq) ((delta, p, _) as thm_p) =
   (TermSet.union gamma delta, q, EqMp(thm_pq, thm_p))
 
 let beta_conv x t u =
-  define_thm "betaConv" (TermSet.empty, Term.eq (Term.app (Term.lam x t) u) (Term.subst [x, u] t), BetaConv(x, t, u))
+  (TermSet.empty, Term.eq (Term.app (Term.lam x t) u) (Term.subst [x, u] t), BetaConv(x, t, u))
 
 let subst theta sigma ((gamma, p, _) as thm_p) =
   let s t = Term.subst sigma (Term.type_subst theta t) in
