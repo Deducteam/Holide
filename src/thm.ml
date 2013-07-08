@@ -1,5 +1,6 @@
-(** HOL Theorems *)
+(** HOL theorems and their translation to Dedukti *)
 
+(* Hypotheses are represented as a set of terms. *)
 module TermSet =
 struct
 
@@ -13,8 +14,11 @@ struct
 
 end
 
+(** Axioms consist of a set of hypotheses and a conclusion. *)
 type axm = TermSet.t * Term.term
 
+(** Theorems consist a set of hypotheses and a conclusion, together with a
+    proof that the conclusion follows from the hypotheses. *)
 type thm = TermSet.t * Term.term * proof
 
 and proof =
@@ -29,23 +33,26 @@ and proof =
   | Subst of (Type.var * Type.hol_type) list * (Term.var * Term.term) list * thm
   | DefineConst of Term.cst * Term.term
 
+(** Check the the term [p] has a [bool] type. *)
+let check_prop p =
+  if Term.type_of p <> Type.bool () then failwith "Axiom term must have type bool"
+
+(** Compute the free type variables using [ftv] as an accumulator. *)
+let free_type_vars (gamma, p, _) =
+  List.fold_left Term.free_type_vars [] (p :: TermSet.elements gamma)
+
+(** Compute the free term variables in [t] using [fv] as an accumulator. *)
+let free_vars (gamma, p, _) =
+  List.fold_left Term.free_vars [] (p :: TermSet.elements gamma)
+
+(** Translation *)
+
 module ThmSharing = Sharing.Make(
   struct
     type t = thm
     let equal = (=)
     let hash = Hashtbl.hash
   end)
-
-let check_prop p =
-  if Term.type_of p <> Type.bool () then failwith "Axiom term must have type bool"
-
-let free_type_vars (gamma, p, _) =
-  List.fold_left Term.free_type_vars [] (p :: TermSet.elements gamma)
-
-let free_vars (gamma, p, _) =
-  List.fold_left Term.free_vars [] (p :: TermSet.elements gamma)
-
-(** Translation *)
 
 let translate_id id = Name.id "thm" id
 
@@ -72,7 +79,6 @@ let rec translate_hyps term_context context hyps =
       let p' = translate_prop term_context p in
       let hyps' = translate_hyps term_context (p :: context) hyps in
       (x', p') :: hyps'
-
 
 (** Translate the HOL theorem [thm] as a Dedukti term. *)
 let rec translate_thm term_context context ((gamma, p, proof) as thm) =

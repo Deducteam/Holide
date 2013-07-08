@@ -1,6 +1,6 @@
-(** Dedukti terms and pretty-printing functions. *)
+(** Dedukti terms and pretty-printing functions *)
 
-(** Grammar of the Dedukti terms. *)
+(** Grammar of the Dedukti terms *)
 
 type var = string
 

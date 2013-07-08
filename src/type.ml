@@ -1,23 +1,17 @@
-(** This module implements the types of HOL and their translation to Dedukti.
-    The translation of the datatypes uses sharing, which is handled by smart
-    constructors. *)
+(** HOL types and their translation to Dedukti *)
 
+(** Type variables *)
 type var = string
 
+(** Type operators *)
 type op = string
 
+(** Types *)
 type hol_type =
   | Var of var
   | App of op * hol_type list
 
-module TypeSharing = Sharing.Make(
-  struct
-    type t = hol_type
-    let equal = (=)
-    let hash = Hashtbl.hash
-  end)
-
-(** Arities of the declared type operators. *)
+(** Arities of the declared type operators *)
 let ops = ref [
     "bool", 0;
     "ind", 0;
@@ -26,14 +20,20 @@ let ops = ref [
 
 let is_declared op = List.mem_assoc op !ops
 
-(** Free variables *)
-
+(** Compute the free type variables in [a] using [fv] as an accumulator. *)
 let rec free_vars fv a =
   match a with
   | Var(x) -> if List.mem x fv then fv else x :: fv
   | App(op, args) -> List.fold_left free_vars fv args
 
 (** Translation *)
+
+module TypeSharing = Sharing.Make(
+  struct
+    type t = hol_type
+    let equal = (=)
+    let hash = Hashtbl.hash
+  end)
 
 let translate_type_id id = Name.id "type" id
 
@@ -105,7 +105,7 @@ let app op args =
     declare_op op (List.length args));
   (App(op, args))
 
-(* Use unit to avoid evaluation while the environment is not set up yet. *)
+(* Use unit to avoid evaluation. *)
 let bool () = app "bool" []
 
 let ind () = app "ind" []
@@ -117,8 +117,10 @@ let get_arr a =
   | App("->", [a; b]) -> (a, b)
   | _ -> failwith ("Not an arrow type")
 
-(** Substitutions *)
+(* We define the following functions after the translation as we might want to
+   use sharing or smart constructors. *)
 
+(** Type substitution *)
 let rec subst theta a =
   match a with
   | Var(x) -> if List.mem_assoc x theta then List.assoc x theta else a

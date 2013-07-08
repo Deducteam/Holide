@@ -1,23 +1,23 @@
-(** This module implements the terms of HOL and their translation to Dedukti.
-    The translation of the datatypes uses sharing, which is handled by smart
-    constructors. *)
+(** HOL terms and their translation to Dedukti. *)
 
+(** Term variables are annotated by their type, as different variables can have
+    the same name but different type. *)
 type var = string * Type.hol_type
 
+(** Term constants *)
 type cst = string
 
+(** Terms *)
 type term =
   | Var of var
   | Cst of cst * Type.hol_type
   | Lam of var * term
   | App of term * term
 
-(** Type alias to satisfy the OrderedType interface used by sets and maps. *)
+(** Type alias to satisfy the OrderedType interface used by sets and maps *)
 type t = term
 
-(** Type schemes of the declared constants. *)
-(* Cannot use the smart constructors because the output environment has not
-    been setup yet. *)
+(** Type schemes of the declared constants *)
 let csts = ref [
     "=", Type.App("->", [Type.Var("A"); Type.App("->", [Type.Var("A"); Type.App("bool", [])])]);
     "select", Type.App("->", [Type.App("->", [Type.Var("A"); Type.App("bool", [])]); Type.Var("A")]);
@@ -26,28 +26,30 @@ let csts = ref [
 let is_declared c = List.mem_assoc c !csts
 
 (** Compute the type of [a], assuming it is well typed. *)
-let rec type_of a =
-  match a with
+let rec type_of t =
+  match t with
   | Var((x, a)) -> a
   | Cst(c, a) -> a
   | Lam((x, a), b) -> Type.arr a (type_of b)
   | App(t, u) -> let a, b = Type.get_arr (type_of t) in b
 
-let rec free_type_vars ftv a =
-  match a with
+(** Compute the free type variables in [t] using [ftv] as an accumulator. *)
+let rec free_type_vars ftv t =
+  match t with
   | Var((x, a)) -> Type.free_vars ftv a
   | Cst(c, a) -> Type.free_vars ftv a
   | Lam((x, a), t) -> free_type_vars (Type.free_vars ftv a) t
   | App(t, u) -> free_type_vars (free_type_vars ftv t) u
 
-let free_vars fv a =
-  let rec free_vars bound fv a =
-    match a with
+(** Compute the free term variables in [t] using [fv] as an accumulator. *)
+let free_vars fv t =
+  let rec free_vars bound fv t =
+    match t with
     | Var(x) -> if List.mem x bound || List.mem x fv then fv else x :: fv
     | Cst(c, a) -> fv
     | Lam(x, t) -> free_vars (x :: bound) fv t
     | App(t, u) -> free_vars bound (free_vars bound fv t) u
-  in free_vars [] fv a
+  in free_vars [] fv t
 
 (** Type to represent the index of bound and free variables. *)
 type index =
@@ -64,7 +66,7 @@ let index context x =
       else index (i + 1) context
   in index 0 context
 
-(** Alpha-equivalence-aware total ordering function. *)
+(** Alpha-equivalence-aware total ordering function *)
 let compare t u =
   (* Lexicographical ordering *)
   let lex f a b g c d = let cmp = f a b in if cmp <> 0 then cmp else g c d in
@@ -93,10 +95,11 @@ let translate_id id = Name.id "term" id
 
 exception UnboundVariable
 
+(** Translate the name of the variable [x] of type [a] according to its
+    position in the binding context. Different variables can have the same name
+    but different types, so we suffix the level of the variable avoid clashes.
+    Raise [UnboundVariable] if the variable is not in [context]. *)
 let translate_var context (x, a) =
-  (* Different variables can have the same name but different types, so we
-     suffix the level of the variable avoid clashes. If the variable is not
-     bound by the context, it should be eliminated. *)
   match index context (x, a) with
   | Bound(i) -> Name.id x (List.length context - i)
   | Free(_) -> raise UnboundVariable
@@ -122,12 +125,12 @@ let rec translate_vars context vars =
     let vars' = translate_vars ((x, a) :: context) vars in
     (x', a') :: vars'
 
-(* Sometimes the variable is not bound by the context, so we should be
-   eliminate it by replacing it with a witness for the type. *)
+(** Translate the variable [x] of type [a] as a Dedukti term. Sometimes the
+    variable is not bound by the context, in which case we should eliminate it
+    by replacing it with a witness for the type [a]. *)
 let translate_var_term context (x, a) =
   try Dedukti.var (translate_var context (x, a))
   with UnboundVariable ->
-(*    Output.print_verbose "Eliminating unbound free variable\n";*)
     Dedukti.app (Dedukti.var (Name.hol "witness")) (Type.translate_type (a))
 
 (** Translate the HOL term [t] as a Dedukti term. *)
@@ -221,8 +224,10 @@ let get_select t =
   | App(Cst("select", _), p) -> p
   | _ -> failwith "Not a select operation"
 
-(** Substitutions *)
+(* We define the following functions after the translation as we might want to
+   use sharing or smart constructors. *)
 
+(** Type substitution *)
 let rec type_subst theta t =
   match t with
   | Var((x, a)) -> var (x, (Type.subst theta a))
@@ -238,8 +243,7 @@ let variant (x, a) avoid =
     if List.mem (y, a) avoid then variant (n + 1) else (y, a) in
   if List.mem (x, a) avoid then variant 1 else (x, a)
 
-(** Capture-avoiding term substitution. The substitution must be given as
-    a list of the form [(x1, a1), u1; ...; (xn, an), un]. *)
+(** Capture-avoiding term substitution *)
 let subst sigma t =
   let fv = List.fold_left free_vars (free_vars [] t) (snd (List.split sigma)) in
   let rec subst fv sigma t =
