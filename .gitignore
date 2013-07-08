@@ -1,6 +1,7 @@
 holide
 build
-dedukti/*opentheory/*
+dedukti/*
+opentheory/*
 dedukti/*
 twelf/*
 coq/*
