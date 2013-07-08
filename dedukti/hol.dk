@@ -1,18 +1,8 @@
-#NAME hol
-
-(;-----------;)
-(; HOL Types ;)
-(;-----------;)
-
 type : Type.
 
 bool : type.
 ind  : type.
 arr  : type -> type -> type.
-
-(;-----------;)
-(; HOL Terms ;)
-(;-----------;)
 
 term : type -> Type.
 
@@ -30,11 +20,6 @@ true : term bool :=
   EQ (arr bool bool) (lam bool bool (p : term bool => p)) (lam bool bool (p : term bool => p)).
 witness : a : type -> term a :=
   a : type => SELECT a (lam a bool (x : term a => true)).
-
-
-(;------------;)
-(; HOL Proofs ;)
-(;------------;)
 
 proof : term bool -> Type.
 

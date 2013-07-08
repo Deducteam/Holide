@@ -30,7 +30,7 @@ let escape name =
     else Printf.sprintf "%a%a" escape_char name.[i] (escape (i + 1)) name in
   escape 0 () name
 
-let hol name = Printf.sprintf "hol.%s" name
+let hol name = Printf.sprintf "%s" name
 
 let id prefix id = Printf.sprintf "%s_%d" (escape prefix) id
 
