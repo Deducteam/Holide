@@ -29,25 +29,25 @@ BUILD = $(OCAMLBUILD) \
 holide:
 	$(BUILD) main.native
 	ln -sf build/src/main.native holide
-	$(COQC) dedukti/hol.v
+	$(COQC) coq/hol.v
 
 test: holide coq/unit.v
 	$(BUILD) test.native --
 	cd coq && $(COQC) unit.v
 
-stdlib: $(STDLIB:%=dedukti/%.dk)
+stdlib: $(STDLIB:%=coq/%.v)
 
 clean:
 	$(BUILD) -clean
 	rm -rf holide
 	rm -f dedukti/hol.lua
-	rm -f $(STDLIB:%=dedukti/%.dk)
+	rm -f $(STDLIB:%=coq/%.dk)
 
 stat:
 	wc -l src/*.ml*
 
-dedukti/%.dk: holide opentheory/%.art
-	./holide opentheory/$*.art -o dedukti/$*.dk 
+coq/%.v: holide opentheory/%.art
+	./holide opentheory/$*.art -o coq/$*.v
 
 opentheory/%.art:
 	$(OPENTHEORY) install $*
