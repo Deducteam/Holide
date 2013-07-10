@@ -115,15 +115,12 @@ let translate_type a =
   Dedukti.app (Dedukti.var (Name.hol "term")) (Type.translate_type a)
 
 (** Translate the list of term variables [x1, a1; ...; xn, an]
-    into the Dedukti terms [x1 : ||a1||; ...; xn : ||an||] *)
+    into the Dedukti terms [x1 : ||a1||; ...; xn : ||an||] and add them to
+    the context. *)
 let rec translate_vars context vars =
-  match vars with
-  | [] -> []
-  | (x, a) :: vars ->
-    let x' = translate_var ((x, a) :: context) (x, a) in
-    let a' = translate_type a in
-    let vars' = translate_vars ((x, a) :: context) vars in
-    (x', a') :: vars'
+  let context = List.rev_append vars context in
+  let vars' = List.map (fun (x, a) -> (translate_var context (x, a), translate_type a)) vars in
+  (vars', context)
 
 (** Translate the variable [x] of type [a] as a Dedukti term. Sometimes the
     variable is not bound by the context, in which case we should eliminate it
@@ -140,8 +137,8 @@ let rec translate_term context t =
     let ftv = free_type_vars [] t in
     let fv = free_vars [] t in
     let id' = Dedukti.var (translate_id id) in
-    let ftv' = List.map (fun x -> Dedukti.var (Type.translate_var x)) (List.rev ftv) in
-    let fv' = List.map (translate_var_term context) (List.rev fv) in
+    let ftv' = List.map (fun x -> Dedukti.var (Type.translate_var x)) ftv in
+    let fv' = List.map (translate_var_term context) fv in
     Dedukti.apps (Dedukti.apps id' ftv') fv'
   with Not_found ->
     match t with
@@ -152,7 +149,7 @@ let rec translate_term context t =
       let ftv = Type.free_vars [] b in
       let theta = Type.match_type [] a b in
       let c' = Dedukti.var (translate_cst c) in
-      let theta' = List.map (fun x -> Type.translate_type (List.assoc x theta)) (List.rev ftv) in
+      let theta' = List.map (fun x -> Type.translate_type (List.assoc x theta)) ftv in
       Dedukti.apps c' theta'
     | Lam((x, a), t) ->
       let x' = translate_var ((x, a) :: context) (x, a) in
@@ -170,7 +167,7 @@ let declare_cst c a =
   if not !Output.just_check then (
     let ftv = Type.free_vars [] a in
     let c' = translate_cst c in  
-    let ftv' = Type.translate_vars (List.rev ftv) in
+    let ftv' = Type.translate_vars ftv in
     let a' = Dedukti.pies ftv' (translate_type a) in
     Output.print_declaration c' a');
   csts := (c, a) :: !csts
@@ -181,10 +178,10 @@ let define_term t =
       let a = type_of t in
       let ftv = free_type_vars [] t in
       let fv = free_vars [] t in  
-      let ftv' = Type.translate_vars (List.rev ftv) in
-      let fv' = translate_vars [] (List.rev fv) in
+      let ftv' = Type.translate_vars ftv in
+      let fv', context = translate_vars [] fv in
       let a' = Dedukti.pies ftv' (Dedukti.pies fv' (translate_type a)) in
-      let t' = Dedukti.lams ftv' (Dedukti.lams fv' (translate_term fv t)) in
+      let t' = Dedukti.lams ftv' (Dedukti.lams fv' (translate_term context t)) in
       let id = TermSharing.add t in
       let id' = translate_id id in
       Output.print_definition ~untyped:true id' a' t');

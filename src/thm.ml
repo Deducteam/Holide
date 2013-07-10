@@ -70,15 +70,12 @@ let translate_prop term_context p =
   Dedukti.app (Dedukti.var (Name.hol "proof")) (Term.translate_term term_context p)
 
 (** Translate the list of hypotheses [p1; ...; pn]
-    into the Dedukti terms [x1 : ||p1||; ...; xn : ||pn||] *)
+    into the Dedukti terms [x1 : ||p1||; ...; xn : ||pn||] and add them to
+    the context *)
 let rec translate_hyps term_context context hyps =
-  match hyps with
-  | [] -> []
-  | p :: hyps ->
-      let x' = translate_hyp (p :: context) p in
-      let p' = translate_prop term_context p in
-      let hyps' = translate_hyps term_context (p :: context) hyps in
-      (x', p') :: hyps'
+  let context = List.rev_append hyps context in
+  let hyps' = List.map (fun p -> (translate_hyp context p, translate_prop term_context p)) hyps in
+  (hyps', context)
 
 (** Translate the HOL theorem [thm] as a Dedukti term. *)
 let rec translate_thm term_context context ((gamma, p, proof) as thm) =
@@ -87,9 +84,9 @@ let rec translate_thm term_context context ((gamma, p, proof) as thm) =
     let ftv = free_type_vars thm in
     let fv = free_vars thm in
     let id' = Dedukti.var (translate_id id) in
-    let ftv' = List.map (fun x -> Dedukti.var (Type.translate_var x)) (List.rev ftv) in
-    let fv' = List.map (fun x -> Term.translate_var_term term_context x) (List.rev fv) in
-    let gammas' = List.map (fun p -> Dedukti.var (translate_hyp context p)) (List.rev (TermSet.elements gamma)) in
+    let ftv' = List.map (fun x -> Dedukti.var (Type.translate_var x)) ftv in
+    let fv' = List.map (fun x -> Term.translate_var_term term_context x) fv in
+    let gammas' = List.map (fun p -> Dedukti.var (translate_hyp context p)) (TermSet.elements gamma) in
     Dedukti.apps (Dedukti.apps (Dedukti.apps id' ftv') fv') gammas'
   with Not_found ->
     match proof with
@@ -166,16 +163,16 @@ let rec translate_thm term_context context ((gamma, p, proof) as thm) =
       (* First abstract the proof of p *)
       let ftv = free_type_vars thm_p in
       let fv = free_vars thm_p in
-      let ftv' = Type.translate_vars (List.rev ftv) in
-      let fv' = Term.translate_vars [] (List.rev fv) in
-      let gamma' = translate_hyps fv [] (List.rev (TermSet.elements gamma)) in
-      let thm' = Dedukti.lams ftv' (Dedukti.lams fv' (Dedukti.lams gamma' (translate_thm fv (TermSet.elements gamma) thm_p))) in
+      let ftv' = Type.translate_vars ftv in
+      let fv', term_context2 = Term.translate_vars [] fv in
+      let gamma', context2 = translate_hyps term_context2 [] (TermSet.elements gamma) in
+      let thm' = Dedukti.lams ftv' (Dedukti.lams fv' (Dedukti.lams gamma' (translate_thm term_context2 context2 thm_p))) in
       (* Then apply to instantiate *)
       let type_subst a = Type.subst theta a in
       let term_subst t = Term.subst sigma (Term.type_subst theta t) in
-      let ftv' = List.map (fun x -> Type.translate_type (type_subst (Type.var x))) (List.rev ftv) in
-      let fv' = List.map (fun x -> Term.translate_term term_context (term_subst (Term.var x))) (List.rev fv) in
-      let gamma' = List.map (fun p -> Dedukti.var (translate_hyp context p)) (List.map term_subst (List.rev (TermSet.elements gamma))) in
+      let ftv' = List.map (fun x -> Type.translate_type (type_subst (Type.var x))) ftv in
+      let fv' = List.map (fun x -> Term.translate_term term_context (term_subst (Term.var x))) fv in
+      let gamma' = List.map (fun p -> Dedukti.var (translate_hyp context p)) (List.map term_subst (TermSet.elements gamma)) in
       Dedukti.apps (Dedukti.apps (Dedukti.apps thm' ftv') fv') gamma'
 
     | _ -> failwith "Not implemented"
@@ -186,10 +183,10 @@ let declare_axiom comment (gamma, p) =
   if not !Output.just_check && not (ThmSharing.mem thm) then (
       let ftv = List.fold_left Term.free_type_vars [] (p :: (TermSet.elements gamma)) in
       let fv = List.fold_left Term.free_vars [] (p :: (TermSet.elements gamma)) in
-      let ftv' = Type.translate_vars (List.rev ftv) in
-      let fv' = Term.translate_vars [] (List.rev fv) in
-      let gamma' = translate_hyps fv [] (List.rev (TermSet.elements gamma)) in
-      let p' = Dedukti.pies ftv' (Dedukti.pies fv' (Dedukti.pies gamma' (translate_prop fv p))) in
+      let ftv' = Type.translate_vars ftv in
+      let fv', term_context = Term.translate_vars [] fv in
+      let gamma', context = translate_hyps term_context [] (TermSet.elements gamma) in
+      let p' = Dedukti.pies ftv' (Dedukti.pies fv' (Dedukti.pies gamma' (translate_prop term_context p))) in
       let id = ThmSharing.add (gamma, p, Axiom(gamma, p)) in
       let id' = translate_id id in
       Output.print_comment comment;
@@ -201,11 +198,11 @@ let define_thm comment ?(untyped=false) ((gamma, p, _) as thm) =
   if not !Output.just_check && not (ThmSharing.mem thm) then (
       let ftv = free_type_vars thm in
       let fv = free_vars thm in
-      let ftv' = Type.translate_vars (List.rev ftv) in
-      let fv' = Term.translate_vars [] (List.rev fv) in
-      let gamma' = translate_hyps fv [] (List.rev (TermSet.elements gamma)) in
-      let p' = Dedukti.pies ftv' (Dedukti.pies fv' (Dedukti.pies gamma' (translate_prop fv p))) in
-      let thm' = Dedukti.lams ftv' (Dedukti.lams fv' (Dedukti.lams gamma' (translate_thm fv (TermSet.elements gamma) thm))) in
+      let ftv' = Type.translate_vars ftv in
+      let fv', term_context = Term.translate_vars [] fv in
+      let gamma', context = translate_hyps term_context [] (TermSet.elements gamma) in
+      let p' = Dedukti.pies ftv' (Dedukti.pies fv' (Dedukti.pies gamma' (translate_prop term_context p))) in
+      let thm' = Dedukti.lams ftv' (Dedukti.lams fv' (Dedukti.lams gamma' (translate_thm term_context context thm))) in
       let id = ThmSharing.add thm in
       let id' = translate_id id in
       Output.print_comment comment;
