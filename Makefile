@@ -1,6 +1,6 @@
 SHELL      = bash
 OCAMLBUILD = ocamlbuild
-DEDUKTI    = dkc
+DEDUKTI    = dkcheck
 OPENTHEORY = opentheory
 
 OPTIONS    = -classic-display
@@ -29,11 +29,11 @@ BUILD = $(OCAMLBUILD) \
 holide:
 	$(BUILD) main.native
 	ln -sf build/src/main.native holide
-	$(DEDUKTI) -o dedukti/hol.lua dedukti/hol.dk
+	cd dedukti && $(DEDUKTI) -e hol.dk
 
 test: holide dedukti/unit.dk
 	$(BUILD) test.native --
-	cd dedukti && dkc unit.dk | lua -
+	cd dedukti && $(DEDUKTI) unit.dk
 
 stdlib: $(STDLIB:%=dedukti/%.dk)
 
