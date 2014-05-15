@@ -29,7 +29,7 @@ let print_comment comment =
 let print_command command args =
   Printf.fprintf !output_channel "\n#%s" command;
   List.iter (Printf.fprintf !output_channel " %s") args;
-  Printf.fprintf !output_channel "\n"
+  Printf.fprintf !output_channel ".\n"
 
 (** Print the declaration [x : a]. *)
 let print_declaration x a =
