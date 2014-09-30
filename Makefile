@@ -7,6 +7,7 @@ OPTIONS    = -classic-display
 BUILD_DIR  = build
 INCLUDES   = src
 LIBS       = str
+INSTALL_DIR= /usr/local/bin
 
 # OpenTheory standard library
 # (needs the opentheory tool if you don't have the article files)
@@ -42,6 +43,9 @@ clean:
 	rm -rf holide
 	rm -f dedukti/hol.lua
 	rm -f $(STDLIB:%=dedukti/%.dk)
+
+install:
+	install holide $(INSTALL_DIR)/
 
 stat:
 	wc -l src/*.ml*
