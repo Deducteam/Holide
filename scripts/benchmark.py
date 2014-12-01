@@ -11,7 +11,7 @@ def basename(filename):
 command = sys.argv[1]
 files = sys.argv[2:]
 
-# Maximum widh of the names to display
+# Maximum width of the names to display
 width = max(map(len, map(basename, files))) 
 files.sort(key=os.path.getsize)
 for filename in files:
