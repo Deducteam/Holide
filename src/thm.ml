@@ -273,8 +273,14 @@ let define_type_op op abs rep tvars (gamma, pt, _) =
      declare_axiom "defineTypeOp" (TermSet.empty, Term.eq (Term.app p var_r) (Term.eq (Term.app rep (Term.app abs var_r)) var_r)))
   | _ -> failwith "ill-formed type definition"
 
+let rec sprint_thm () (gamma, p, _) =
+  (* WARNING: printing of context not yet implemented *)
+  Printf.sprintf "|- %a" Term.sprint_term p
+
 let thm gamma p ((delta, q, _) as thm) =
   if Term.compare p q <> 0 then failwith "theorem conclusion must be alpha-equivalent";
   if not (TermSet.subset delta (TermSet.of_list gamma)) then failwith "theorem hypotheses must be alpha-equivalent";
+  Output.print_comment "Theorem";
+  Output.print_comment (Printf.sprintf "%a" sprint_thm thm);
   define_thm "thm" thm
 

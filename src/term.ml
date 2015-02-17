@@ -257,3 +257,13 @@ let subst sigma t =
     | App(t, u) -> app (subst fv sigma t) (subst fv sigma u) in
   subst fv sigma t
 
+let rec sprint_term () t =
+  match t with
+  | Var (x, _) ->
+    Printf.sprintf "%s" x
+  | Cst (c, _) ->
+    Printf.sprintf "%s" c
+  | Lam ((x, _), t) ->
+    Printf.sprintf "\\lambda %s. %a" x sprint_term t
+  | App (t, u) ->
+    Printf.sprintf "(%a %a)" sprint_term t sprint_term u
