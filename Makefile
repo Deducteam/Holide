@@ -117,7 +117,7 @@ $(STDLIB_ART): opentheory/%.art:
 	$(OPENTHEORY) install $*
 	$(OPENTHEORY) info --article -o $@ $*
 
-$(STDLIB_DK): dedukti/%.dk: opentheory/%.art holide
+$(STDLIB_DK): dedukti/%.dk: opentheory/%.art
 	./holide $< -o $@
 
 $(THEORY_DKO): dedukti/%.dko: dedukti/%.dk
@@ -126,7 +126,7 @@ $(THEORY_DKO): dedukti/%.dko: dedukti/%.dk
 $(STDLIB_DKO): dedukti/%.dko: dedukti/%.dk $(THEORY_DKO)
 	cd $(dir $<) && $(DEDUKTI) -e $(notdir $<)
 
-.PHONY :
+.PHONY: \
 	holide get-stdlib translate-stdlib compile-theory compile-stdlib \
   clean clean-holide clean-stdlib-dk clean-theory-dko clean-stdlib-dko \
   test test-all test-translate-stdlib test-compile-stdlib
