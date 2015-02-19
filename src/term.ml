@@ -161,7 +161,7 @@ let rec translate_term context t =
       let u' = translate_term context u in 
       Dedukti.app t' u'
 
-(** Declare the term [c : a]. *)
+(** Declare the constant [c : a]. *)
 let declare_cst c a =
   Output.print_verbose "Declaring constant %s\n%!" c;
   if not !Output.just_check then (
@@ -171,6 +171,19 @@ let declare_cst c a =
     let a' = Dedukti.pies ftv' (translate_type a) in
     Output.print_comment (Printf.sprintf "Constant %s" c);
     Output.print_declaration c' a');
+  csts := (c, a) :: !csts
+
+(** Define the constant [c : a := t]. *)
+let define_cst c a t =
+  Output.print_verbose "Defining constant %s\n%!" c;
+  if not !Output.just_check then (
+    let ftv = Type.free_vars [] a in
+    let c' = translate_cst c in
+    let ftv' = Type.translate_vars ftv in
+    let a' = Dedukti.pies ftv' (translate_type a) in
+    let t' = Dedukti.lams ftv' (translate_term [] t) in
+    Output.print_comment (Printf.sprintf "Constant %s" c);
+    Output.print_definition c' a' t');
   csts := (c, a) :: !csts
 
 (** Define the term [id := t]. *)
