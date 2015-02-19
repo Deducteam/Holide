@@ -169,6 +169,7 @@ let declare_cst c a =
     let c' = translate_cst c in  
     let ftv' = Type.translate_vars ftv in
     let a' = Dedukti.pies ftv' (translate_type a) in
+    Output.print_comment (Printf.sprintf "Constant %s" c);
     Output.print_declaration c' a');
   csts := (c, a) :: !csts
 
