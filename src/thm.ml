@@ -280,7 +280,6 @@ let rec sprint_thm () (gamma, p, _) =
 let thm gamma p ((delta, q, _) as thm) =
   if Term.compare p q <> 0 then failwith "theorem conclusion must be alpha-equivalent";
   if not (TermSet.subset delta (TermSet.of_list gamma)) then failwith "theorem hypotheses must be alpha-equivalent";
-  Output.print_comment "Theorem";
-  Output.print_comment (Printf.sprintf "%a" sprint_thm thm);
+  Output.print_comment (Printf.sprintf "Theorem: %a" sprint_thm thm);
   define_thm "thm" thm
 
