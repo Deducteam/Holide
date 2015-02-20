@@ -92,7 +92,7 @@ let alpha_equiv t u =
 let interpretation = [
     "Data.Bool.F", (tybool, Name.hol "false");
     "Data.Bool.T", (tybool, Name.hol "true");
-  (* "Data.Bool.~", (tyarrow tybool tybool, Name.hol "not"); *)
+    "Data.Bool.~", (tyarrow tybool tybool, Name.hol "not");
     "Data.Bool.==>", (tyarrow tybool (tyarrow tybool tybool), Name.hol "imp");
     "Data.Bool./\\", (tyarrow tybool (tyarrow tybool tybool), Name.hol "and");
     "Data.Bool.\\/", (tyarrow tybool (tyarrow tybool tybool), Name.hol "or");

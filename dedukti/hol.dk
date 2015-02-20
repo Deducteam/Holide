@@ -83,6 +83,9 @@ cond : a : type -> term (arr bool (arr a (arr a a))) :=
       (imp (eq bool t true) (eq a x t1))
       (imp (eq bool t false) (eq a x t2))).
 
+not (p : term bool) :=
+  imp p false.
+
 witness : a : type -> term a.
 (; :=  a : type => select a (x : term a => true). ;)
 
