@@ -34,7 +34,7 @@ REFL : a : type -> t : term a ->
   proof (eq a t t).
 ABS_THM : a : type -> b : type -> f : (term a -> term b) -> g : (term a -> term b) ->
   (x : term a -> proof (eq b (f x) (g x))) ->
-  proof (eq (arr a b) f g).  
+  proof (eq (arr a b) f g).
 APP_THM : a : type -> b : type -> f : term (arr a b) -> g : term (arr a b) -> x : term a -> y : term a ->
   proof (eq (arr a b) f g) ->
   proof (eq a x y) ->
@@ -52,3 +52,206 @@ BETA_CONV : a : type -> b : type -> f : (term a -> term b) -> u : term a ->
     a : type => b : type => f : (term a -> term b) => u : term a =>
     REFL b (f u).
 
+(;---------------------;)
+(; Derived Connectives ;)
+(;---------------------;)
+
+true : term bool :=
+  eq (arr bool bool) (p : term bool => p) (p : term bool => p).
+
+forall : a : type -> p : term (arr a bool) -> term bool :=
+  a : type => p : term (arr a bool) =>
+  eq (arr a bool) p (x : term a => true).
+
+false : term bool :=
+  forall bool (p : term bool => p).
+
+and : term (arr bool (arr bool bool)) :=
+  p : term bool => q : term bool =>
+  eq (arr (arr bool (arr bool bool)) bool)
+    (f : term (arr bool (arr bool bool)) => f p q)
+    (f : term (arr bool (arr bool bool)) => f true true).
+
+imp : term (arr bool (arr bool bool)) :=
+  p : term bool => q : term bool =>
+  eq bool (and p q) p.
+
+or : term (arr bool (arr bool bool)) :=
+  p : term bool => q : term bool =>
+  forall bool (r : term bool => imp (imp p r) (imp (imp q r) r)).
+
+witness : a : type -> term a.
+(; :=  a : type => select a (x : term a => true). ;)
+
+true_intro : proof true :=
+  REFL (arr bool bool) (p : term bool => p).
+
+eq_sym (a : type) (x : term a) (y : term a) (h : proof (eq a x y)) : proof (eq a y x) :=
+  EQ_MP (eq a x x) (eq a y x)
+    (APP_THM a bool (eq a x) (eq a y) x x
+      (APP_THM a (arr a bool) (eq a) (eq a) x y
+        (REFL (arr a (arr a bool)) (eq a))
+        (h))
+      (REFL a x))
+    (REFL a x).
+
+eq_true_intro (p : term bool) (h : proof p) : proof (eq bool p true) :=
+  PROP_EXT p true (h2 : proof true => h) (h : proof p => true_intro).
+
+eq_true_elim (p : term bool) (h : proof (eq bool p true)) : proof p :=
+  EQ_MP true p (eq_sym bool p true h) true_intro.
+
+forall_intro (a : type) (p : term (arr a bool))
+  (h : (x : term a -> proof (p x))) : proof (forall a p) :=
+  ABS_THM a bool p (x : term a => true) (x : term a =>
+    eq_true_intro (p x) (h x)).
+
+forall_elim (a : type) (p : term (arr a bool))
+  (h : proof (forall a p)) (x : term a) : proof (p x) :=
+  eq_true_elim (p x)
+    (APP_THM a bool p (x : term a => true) x x h (REFL a x)).
+
+false_elim (p : term bool) (h : proof false) : proof p :=
+  forall_elim bool (p : term bool => p) h p.
+
+and_intro (p : term bool)
+          (q : term bool)
+          (Hp : proof p)
+          (Hq : proof q)
+          : proof (and p q)
+:=
+  ABS_THM
+    (arr bool (arr bool bool))
+    bool
+      (f : term (arr bool (arr bool bool)) => f p q)
+      (f : term (arr bool (arr bool bool)) => f true true)
+      (f : term (arr bool (arr bool bool)) =>
+       APP_THM
+         bool
+         bool
+         (f p)
+         (f true)
+         q
+           true
+           (APP_THM
+             bool
+             (arr bool bool)
+             f
+             f
+             p
+             true
+             (REFL (arr bool (arr bool bool)) f)
+             (eq_true_intro p Hp))
+           (eq_true_intro q Hq)).
+
+and_elim1 (p : term bool)
+          (q : term bool)
+          (Hpq : proof (and p q))
+          : proof p
+:=
+  eq_true_elim p
+    (APP_THM
+      (arr bool (arr bool bool))
+      bool
+        (f : (term bool -> term bool -> term bool) => f p q)
+        (f : (term bool -> term bool -> term bool) => f true true)
+        (x : term bool => y : term bool => x)
+        (x : term bool => y : term bool => x)
+        Hpq
+          (REFL (arr bool (arr bool bool)) (x : term bool => y : term bool => x))).
+
+
+and_elim2 (p : term bool)
+          (q : term bool)
+          (Hpq : proof (and p q))
+          : proof q
+:=
+  eq_true_elim q
+    (APP_THM
+      (arr bool (arr bool bool))
+      bool
+        (f : (term bool -> term bool -> term bool) => f p q)
+        (f : (term bool -> term bool -> term bool) => f true true)
+        (x : term bool => y : term bool => y)
+        (x : term bool => y : term bool => y)
+        Hpq
+          (REFL (arr bool (arr bool bool)) (x : term bool => y : term bool => y))).
+
+imp_intro (p : term bool)
+          (q : term bool)
+          (Hpq : proof p -> proof q)
+          : proof (imp p q)
+:=
+  PROP_EXT (and p q) p
+             (Hp : proof p =>
+              and_intro p q Hp (Hpq Hp))
+             (and_elim1 p q).
+
+
+imp_elim (p : term bool)
+         (q : term bool)
+         (Hpq : proof (imp p q))
+         (Hp : proof p)
+         : proof q
+:=
+  and_elim2 p q (EQ_MP p (and p q) (eq_sym bool (and p q) p Hpq) Hp).
+
+or_intro1 (p : term bool)
+          (q : term bool)
+          (Hp : proof p)
+          : proof (or p q)
+:=
+  forall_intro
+    bool
+    (r : term bool => imp (imp p r) (imp (imp q r) r))
+    (r : term bool =>
+     imp_intro
+       (imp p r)
+       (imp (imp q r) r)
+       (H : proof (imp p r) =>
+        imp_intro
+          (imp q r)
+          r
+            (__ : proof (imp q r) =>
+            imp_elim p r H Hp))).
+
+
+or_intro2 (p : term bool)
+          (q : term bool)
+          (Hq : proof q)
+          : proof (or p q)
+:=
+  forall_intro
+    bool
+    (r : term bool => imp (imp p r) (imp (imp q r) r))
+    (r : term bool =>
+     imp_intro
+       (imp p r)
+       (imp (imp q r) r)
+       (__ : proof (imp p r) =>
+       imp_intro
+         (imp q r)
+         r
+           (H : proof (imp q r) =>
+            imp_elim q r H Hq))).
+
+or_elim (p : term bool)
+        (q : term bool)
+        (r : term bool)
+        (Hpq : proof (or p q))
+        (Hpr : proof p -> proof r)
+        (Hqr : proof q -> proof r) : proof r
+:=
+  imp_elim
+    (imp q r)
+    r
+      (imp_elim
+        (imp p r)
+        (imp (imp q r) r)
+        (forall_elim
+          bool
+          (r : term bool => imp (imp p r) (imp (imp q r) r))
+          Hpq
+            r)
+        (imp_intro p r Hpr))
+      (imp_intro q r Hqr).

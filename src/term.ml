@@ -17,6 +17,10 @@ type term =
 (** Type alias to satisfy the OrderedType interface used by sets and maps *)
 type t = term
 
+let tyvar x = Type.Var(x)
+let tybool = Type.App("bool", [])
+let tyarrow a b = Type.App("->", [a; b])
+
 (** Type schemes of the declared constants *)
 let csts = ref [
     "=", Type.App("->", [Type.Var("A"); Type.App("->", [Type.Var("A"); Type.App("bool", [])])]);
@@ -84,6 +88,23 @@ let alpha_equiv t u =
 
 (** Translation *)
 
+(** Interprestation of special constants **)
+let interpretation = [
+    "Data.Bool.F", (tybool, Name.hol "false");
+    "Data.Bool.T", (tybool, Name.hol "true");
+  (* "Data.Bool.~", (tyarrow tybool tybool, Name.hol "not"); *)
+    "Data.Bool.==>", (tyarrow tybool (tyarrow tybool tybool), Name.hol "imp");
+    "Data.Bool./\\", (tyarrow tybool (tyarrow tybool tybool), Name.hol "and");
+    "Data.Bool.\\/", (tyarrow tybool (tyarrow tybool tybool), Name.hol "or");
+    "Data.Bool.!", (tyarrow (tyarrow (tyvar "A") tybool) tybool, Name.hol "forall");
+    (* "Data.Bool.?", (tyarrow (tyarrow (tyvar "A") tybool) tybool, Name.hol "exists");
+    "Data.Bool.?!", (tyarrow (tyarrow (tyvar "A") tybool) tybool, Name.hol "exists_unique");
+    "Data.Bool.cond", (tyarrow tybool (tyarrow (tyvar "A") (tyarrow (tyvar "A") tybool)), Name.hol "if"); *)
+  ]
+
+let () =
+  List.iter (fun (c, (a, c')) -> csts := (c, a) :: !csts) interpretation
+
 module TermSharing = Sharing.Make(
   struct
     type t = term
@@ -108,7 +129,11 @@ let translate_cst c =
   match c with
   | "=" -> Name.hol "eq"
   | "select" -> Name.hol "select"
-  | _ -> Name.escape c
+  | _ ->
+    begin
+      try snd (List.assoc c interpretation) with
+      | Not_found -> Name.escape c
+    end
 
 (** Translate the HOL type [a] as a Dedukti type. *)
 let translate_type a =

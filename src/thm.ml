@@ -251,8 +251,11 @@ let subst theta sigma ((gamma, p, _) as thm_p) =
 let define_const c t =
   if Term.free_vars [] t <> [] then failwith "constant definition contains free variables";
   let a = Term.type_of t in
-  Term.define_cst c a t;
-  (TermSet.empty, Term.eq (Term.cst c a) t, Refl (Term.cst c a))
+  if List.mem_assoc c Term.interpretation then
+    (TermSet.empty, Term.eq (Term.cst c a) t, Refl (Term.cst c a))
+  else
+    let () = Term.define_cst c a t in
+    (TermSet.empty, Term.eq (Term.cst c a) t, Refl (Term.cst c a))
 
 let define_type_op op abs rep tvars (gamma, pt, _) =
   if not (TermSet.is_empty gamma) then failwith "type definition contains hypotheses";
