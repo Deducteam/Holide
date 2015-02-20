@@ -98,8 +98,8 @@ let interpretation = [
     "Data.Bool.\\/", (tyarrow tybool (tyarrow tybool tybool), Name.hol "or");
     "Data.Bool.!", (tyarrow (tyarrow (tyvar "A") tybool) tybool, Name.hol "forall");
     (* "Data.Bool.?", (tyarrow (tyarrow (tyvar "A") tybool) tybool, Name.hol "exists");
-    "Data.Bool.?!", (tyarrow (tyarrow (tyvar "A") tybool) tybool, Name.hol "exists_unique");
-    "Data.Bool.cond", (tyarrow tybool (tyarrow (tyvar "A") (tyarrow (tyvar "A") tybool)), Name.hol "if"); *)
+    "Data.Bool.?!", (tyarrow (tyarrow (tyvar "A") tybool) tybool, Name.hol "exists_unique"); *)
+    "Data.Bool.cond", (tyarrow tybool (tyarrow (tyvar "A") (tyarrow (tyvar "A") (tyvar "A"))), Name.hol "cond");
   ]
 
 let () =

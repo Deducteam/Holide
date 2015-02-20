@@ -19,10 +19,6 @@ term : type -> Type.
 
 eq : a : type -> term (arr a (arr a bool)).
 select : a : type -> term (arr (arr a bool) a).
-true : term bool :=
-  eq (arr bool bool) (p : term bool => p) (p : term bool => p).
-witness : a : type -> term a :=
-  a : type => select a (x : term a => true).
 
 (;------------;)
 (; HOL Proofs ;)
@@ -79,6 +75,13 @@ imp : term (arr bool (arr bool bool)) :=
 or : term (arr bool (arr bool bool)) :=
   p : term bool => q : term bool =>
   forall bool (r : term bool => imp (imp p r) (imp (imp q r) r)).
+
+cond : a : type -> term (arr bool (arr a (arr a a))) :=
+  a : type => t : term bool => t1 : term a => t2 : term a =>
+  select a (x : term a =>
+    and
+      (imp (eq bool t true) (eq a x t1))
+      (imp (eq bool t false) (eq a x t2))).
 
 witness : a : type -> term a.
 (; :=  a : type => select a (x : term a => true). ;)
