@@ -43,9 +43,9 @@ let print_definition ?(opaque=false) ?(untyped=false) x a b =
   then (
     if opaque
     then Printf.fprintf !output_channel "\n{%s} :=\n  %a.\n" x Dedukti.print_term b
-    else Printf.fprintf !output_channel "\n%s :=\n  %a.\n" x Dedukti.print_term b)
+    else Printf.fprintf !output_channel "\ndef %s :=\n  %a.\n" x Dedukti.print_term b)
   else (
     if opaque
     then Printf.fprintf !output_channel "\n{%s} : %a :=\n  %a.\n" x Dedukti.print_term a Dedukti.print_term b
-    else Printf.fprintf !output_channel "\n%s : %a :=\n  %a.\n" x Dedukti.print_term a Dedukti.print_term b)
+    else Printf.fprintf !output_channel "\ndef %s : %a :=\n  %a.\n" x Dedukti.print_term a Dedukti.print_term b)
     
