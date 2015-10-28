@@ -3,6 +3,7 @@
 let extension = function
   | Options.Dk -> ".dk"
   | Options.Coq -> ".v"
+  | Options.Twelf -> ".elf"
   | Options.No -> assert false
 
 (** Printf-like function for printing information. *)
@@ -10,9 +11,10 @@ let print_verbose fmt =
   if !Options.quiet then Printf.ifprintf stdout fmt else Printf.fprintf stdout fmt
 
 let print_comment comment = match !Options.language with
-  | Options.No  -> ()
-  | Options.Dk  -> Printf.fprintf !Options.output_channel "\n(; %s ;)\n" comment
-  | Options.Coq -> Printf.fprintf !Options.output_channel "\n(* %s *)\n" comment
+  | Options.No    -> ()
+  | Options.Dk    -> Printf.fprintf !Options.output_channel "\n(; %s ;)\n" comment
+  | Options.Coq   -> Printf.fprintf !Options.output_channel "\n(* %s *)\n" comment
+  | Options.Twelf -> Printf.fprintf !Options.output_channel "\n%% %s %%\n" comment
 
 (** Print the command (e.g. ["NAME"], ["IMPORT"]) followed by its arguments. *)
 let print_command command args =
@@ -49,4 +51,12 @@ let print_definition ?(opaque=false) ?(untyped=false) x a b =
      if not untyped
      then Printf.fprintf chan " : %a" Dedukti.print_term a;
      Printf.fprintf chan " :=\n  %a.\n" Dedukti.print_term b;
+  | Options.Twelf ->
+     if untyped then
+       Printf.fprintf chan "\n%%abbrev\n%s =\n  %a.\n" x Dedukti.print_term b
+     else if opaque then
+       Printf.fprintf chan "\n%s : %a.\n%%abbrev\n_ : %a =\n  %a.\n"
+         x Dedukti.print_term a Dedukti.print_term a Dedukti.print_term b
+     else
+       Printf.fprintf chan "\n%%abbrev\n%s : %a =\n  %a.\n" x Dedukti.print_term a Dedukti.print_term b
 

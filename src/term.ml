@@ -148,13 +148,13 @@ let translate_var_term context (x, a) =
 let mk_lam a a' b x t =
   let lam = Dedukti.lam (x, a') t in
   match !Options.language with
-  | No | Dk -> lam
-  | Coq -> Dedukti.apps (Dedukti.var (Name.hol "lam")) [a; b; lam]
+  | Options.No | Options.Dk -> lam
+  | Options.Coq | Options.Twelf -> Dedukti.apps (Dedukti.var (Name.hol "lam")) [a; b; lam]
 
 let mk_app a b t u =
   match !Options.language with
-  | No | Dk -> Dedukti.app t u
-  | Coq -> Dedukti.apps (Dedukti.var (Name.hol "app")) [a; b; t; u]
+  | Options.No | Options.Dk -> Dedukti.app t u
+  | Options.Coq | Options.Twelf -> Dedukti.apps (Dedukti.var (Name.hol "app")) [a; b; t; u]
 
 (** Translate the HOL term [t] as a Dedukti term. *)
 let rec translate_term context t =
@@ -186,7 +186,6 @@ let rec translate_term context t =
       mk_lam a' (translate_type a) b' x' t'
     | App(t, u) ->
       let a, b = Type.get_arr (type_of t) in
-      let app' = Dedukti.var (Name.hol "app") in
       let a' = Type.translate_type a in
       let b' = Type.translate_type b in
       let t' = translate_term context t in

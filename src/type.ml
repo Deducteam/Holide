@@ -46,9 +46,16 @@ let translate_op op =
   | "->" -> Name.hol "arr"
   | _ -> Name.escape op
 
+let translate_htype () =
+  match !Options.language with
+  | Options.No
+  | Options.Dk
+  | Options.Coq -> Dedukti.var (Name.hol "type")
+  | Options.Twelf -> Dedukti.var (Name.hol "htype")
+
 (** Translate a HOL kind as a Dedukti type. *)
 let translate_kind arity =
-  let k = Dedukti.var (Name.hol "type") in
+  let k = translate_htype () in
   Dedukti.arrs (Array.to_list (Array.make arity k)) k
 
 (** Translate a HOL type as a Dedukti term. *)

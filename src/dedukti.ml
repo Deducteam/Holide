@@ -40,14 +40,18 @@ let rec print_term out term =
      | Options.Dk ->
         Printf.fprintf out "%s : %a -> %a" x print_applicative a print_term b
      | Options.Coq ->
-        Printf.fprintf out "forall (%s : %a), %a" x print_applicative a print_term b)
+        Printf.fprintf out "forall (%s : %a), %a" x print_applicative a print_term b
+     | Options.Twelf ->
+        Printf.fprintf out "{%s : %a} %a" x print_applicative a print_term b)
   | Lam(x, a, b) ->
      (match !Options.language with
      | Options.No -> ()
      | Options.Dk ->
         Printf.fprintf out "%s : %a => %a" x print_applicative a print_term b
      | Options.Coq ->
-        Printf.fprintf out "fun (%s : %a) => %a" x print_applicative a print_term b)
+        Printf.fprintf out "fun (%s : %a) => %a" x print_applicative a print_term b
+     | Options.Twelf ->
+        Printf.fprintf out "[%s : %a] %a" x print_applicative a print_term b)
   | _ ->
     Printf.fprintf out "%a" print_applicative term
 
@@ -61,7 +65,10 @@ and print_applicative out term =
 and print_atomic out term =
   match term with
   | Type ->
-    Printf.fprintf out "Type"
+     (match !Options.language with
+     | Options.No -> ()
+     | Options.Dk | Options.Coq -> Printf.fprintf out "Type"
+     | Options.Twelf ->  Printf.fprintf out "type")
   | Var(x) ->
     Printf.fprintf out "%s" x
   | _ ->

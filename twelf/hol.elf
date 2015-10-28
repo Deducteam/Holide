@@ -1,0 +1,50 @@
+% HOL types %
+
+htype : type.
+
+bool : htype.
+ind  : htype.
+arr : htype -> htype -> htype.
+
+% HOL terms %
+
+term : htype -> type.
+
+lam : {a : htype} {b : htype} (term a -> term b) -> term (arr a b).
+app : {a : htype} {b : htype} term (arr a b) -> term a -> term b.
+eq : {a : htype} term (arr a (arr a bool)).
+select : {a : htype} term (arr (arr a bool) a).
+
+EQ : {a : htype} term a -> term a -> term bool =
+  [a : htype] [x : term a] [y : term a] app a bool (app a (arr a bool) (eq a) x) y.
+SELECT : {a : htype} term (arr a bool) -> term a =
+  [a : htype] [p : term (arr a bool)] app (arr a bool) a (select a) p.
+
+true : term bool =
+  EQ (arr bool bool) (lam bool bool ([p : term bool] p)) (lam bool bool ([p : term bool] p)).
+witness : {a : htype} term a =
+  [a : htype] SELECT a (lam a bool ([x : term a] true)).
+
+% HOL proofs %
+
+proof : term bool -> type.
+
+REFL : {a : htype} {t : term a}
+  proof (EQ a t t).
+ABS_THM : {a : htype} {b : htype} {f : (term a -> term b)} {g : (term a -> term b)}
+  ({x : term a} proof (EQ b (f x) (g x))) ->
+  proof (EQ (arr a b) (lam a b f) (lam a b g)).
+APP_THM : {a : htype} {b : htype} {f : term (arr a b)} {g : term (arr a b)} {x : term a} {y : term a}
+  proof (EQ (arr a b) f g) ->
+  proof (EQ a x y) ->
+  proof (EQ b (app a b f x) (app a b g y)).
+PROP_EXT : {p : term bool} {q : term bool}
+  (proof q -> proof p) ->
+  (proof p -> proof q) ->
+  proof (EQ bool p q).
+EQ_MP : {p : term bool} {q : term bool}
+  proof (EQ bool p q) ->
+  proof p ->
+  proof q.
+BETA_CONV : {a : htype} {b : htype} {f : term a -> term b} {x : term a}
+  proof (EQ b (app a b (lam a b f) x) (f x)).

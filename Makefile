@@ -6,6 +6,7 @@ SHELL      = bash
 OCAMLBUILD = ocamlbuild
 DEDUKTI    = dkcheck    # (optional)
 COQC       = coqc       # (optional)
+TWELF      = ./twelf-check
 OPENTHEORY = opentheory # (optional)
 
 #################
@@ -47,12 +48,16 @@ THEORY_DK  = $(THEORY:%=dedukti/%.dk)
 THEORY_DKO = $(THEORY:%=dedukti/%.dko)
 THEORY_V   = $(THEORY:%=coq/%.v)
 THEORY_VO  = $(THEORY:%=coq/%.vo)
+THEORY_ELF = $(THEORY:%=twelf/%.elf)
+THEORY_ELC = $(THEORY:%=twelf/%.elc)
 
 STDLIB_ART = $(STDLIB:%=opentheory/%.art)
 STDLIB_DK  = $(STDLIB:%=dedukti/%.dk)
 STDLIB_DKO = $(STDLIB:%=dedukti/%.dko)
 STDLIB_V   = $(STDLIB:%=coq/%.v)
 STDLIB_VO  = $(STDLIB:%=coq/%.vo)
+STDLIB_ELF = $(STDLIB:%=twelf/%.elf)
+STDLIB_ELC = $(STDLIB:%=twelf/%.elc)
 
 BUILD = $(OCAMLBUILD) \
   $(OPTIONS) -libs $(LIBS) -I $(SOURCE_DIR) -build-dir $(BUILD_DIR)
@@ -74,19 +79,19 @@ uninstall:
 # Only works if you have the opentheory package manager
 get-stdlib: $(STDLIB_ART)
 
-translate-stdlib: $(STDLIB_DK) $(STDLIB_V)
+translate-stdlib: $(STDLIB_DK) $(STDLIB_V) $(STDLIB_ELF)
 
-compile-theory: $(THEORY_DKO) $(THEORY_VO)
+compile-theory: $(THEORY_DKO) $(THEORY_VO) $(THEORY_ELC)
 
-compile-stdlib: $(STDLIB_DKO) $(STDLIB_VO)
+compile-stdlib: $(STDLIB_DKO) $(STDLIB_VO) $(STDLIB_ELC)
 
 all: holide get-stdlib translate-stdlib compile-theory compile-stdlib
 
 test: test-all
 
-clean: clean-holide clean-theory-dko clean-theory-vo\
-	clean-stdlib-dko clean-stdlib-vo\
-	clean-stdlib-dk clean-stdlib-v
+clean: clean-holide clean-theory-dko clean-theory-elc clean-theory-vo\
+	clean-stdlib-dko clean-stdlib-elc clean-stdlib-vo\
+	clean-stdlib-dk clean-stdlib-elf clean-stdlib-v
 
 #################
 # Dirty details #
@@ -102,17 +107,26 @@ clean-stdlib-dk:
 clean-stdlib-v:
 	rm -f $(STDLIB_V)
 
+clean-stdlib-elf:
+	rm -f $(STDLIB_ELF)
+
 clean-theory-dko:
 	rm -f $(THEORY_DKO)
 
 clean-theory-vo:
 	rm -f $(THEORY_VO)
 
+clean-theory-elc:
+	rm -f $(THEORY_ELC)
+
 clean-stdlib-dko:
 	rm -f $(STDLIB_DKO)
 
 clean-stdlib-vo:
 	rm -f $(STDLIB_VO)
+
+clean-stdlib-elc:
+	rm -f $(STDLIB_ELC)
 
 test-all:
 	$(MAKE) clean
@@ -121,12 +135,14 @@ test-all:
 test-translate-stdlib:
 	$(MAKE) clean-stdlib-dk
 	$(MAKE) clean-stdlib-v
+	$(MAKE) clean-stdlib-elf
 	$(MAKE) holide
 	time $(MAKE) translate-stdlib
 
 test-compile-stdlib:
 	$(MAKE) clean-stdlib-dko
 	$(MAKE) clean-stdlib-vo
+	$(MAKE) clean-stdlib-elc
 	$(MAKE) holide translate-stdlib compile-theory
 	time $(MAKE) compile-stdlib
 
@@ -141,11 +157,17 @@ $(STDLIB_DK): dedukti/%.dk: opentheory/%.art
 $(STDLIB_V): coq/%.v: opentheory/%.art
 	./holide $< --output-language Coq -o $@
 
+$(STDLIB_ELF): twelf/%.elf: opentheory/%.art
+	./holide $< --output-language Twelf -o $@
+
 $(THEORY_DKO): dedukti/%.dko: dedukti/%.dk
 	cd $(dir $<) && $(DEDUKTI) -e $(notdir $<)
 
 $(THEORY_VO): coq/%.vo: coq/%.v
 	cd $(dir $<) && $(COQC) $(notdir $<)
+
+$(THEORY_ELC): twelf/%.elc: twelf/%.elf
+	cd $(dir $<) && $(TWELF) $(notdir $<)
 
 $(STDLIB_DKO): dedukti/%.dko: dedukti/%.dk $(THEORY_DKO)
 	cd $(dir $<) && $(DEDUKTI) -e $(notdir $<)
@@ -153,10 +175,14 @@ $(STDLIB_DKO): dedukti/%.dko: dedukti/%.dk $(THEORY_DKO)
 $(STDLIB_VO): coq/%.vo: coq/%.v $(THEORY_VO)
 	cd $(dir $<) && $(COQC) $(notdir $<)
 
+$(STDLIB_ELC): twelf/%.elc: twelf/%.elf $(THEORY_ELF)
+	cd $(dir $<) && $(TWELF) $(notdir $(THEORY_ELF)) $(notdir $<)
+
 .PHONY: \
 	holide get-stdlib translate-stdlib compile-theory compile-stdlib \
   clean clean-holide clean-stdlib-dk clean-theory-dko clean-stdlib-dko \
   clean-stdlib-v clean-theory-vo clean-stdlib-vo \
+  clean-stdlib-elf clean-theory-elc clean-stdlib-elc \
   test test-all test-translate-stdlib test-compile-stdlib
 
 # Prevent make from deleting intermediary files.

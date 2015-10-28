@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+(echo "set chatter 0"; for file in $@; do echo "loadFile $file"; done) | twelf-server
+

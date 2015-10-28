@@ -5,7 +5,7 @@ let output_file = ref ""
 let output_channel = ref stdout
 
 (* Output language option *)
-type language = No | Dk | Coq
+type language = No | Dk | Coq | Twelf
 let language = ref Dk
 
 (** Quiet mode option. *)
@@ -26,5 +26,6 @@ let set_language lang =
     | "none" | "None" -> No
     | "dedukti" | "Dedukti" | "dk" | "Dk" -> Dk
     | "coq" | "Coq" -> Coq
+    | "twelf" | "Twelf" -> Twelf
     | _ -> failwith ("unknown output_language: \"" ^ lang ^ "\"")
   )

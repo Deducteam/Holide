@@ -5,7 +5,7 @@ let show_version () =
   exit 0
 
 let options = Arg.align [
-    "--output-language", Arg.String(Options.set_language), "<language> Set output language. Valid values are: None, Dedukti, Coq. Default: Dedukti";
+    "--output-language", Arg.String(Options.set_language), "<language> Set output language. Valid values are: None, Dedukti, Coq, and Twelf. Default: Dedukti";
     "--just-check", Arg.Unit(fun () -> Options.set_language "None"), " Just check, do not translate (Same as --output-language None)";
     "-o", Arg.String(Options.set_output), "<file> Set output filename";
     "--quiet", Arg.Set(Options.quiet), " Suppress all information";
