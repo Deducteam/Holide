@@ -4,8 +4,9 @@ let output_file = ref ""
 
 let output_channel = ref stdout
 
-(** Just check option. *)
-let just_check = ref false
+(* Output language option *)
+type language = No | Dk
+let language = ref Dk
 
 (** Quiet mode option. *)
 let quiet = ref false
@@ -17,6 +18,20 @@ let untyped_def = ref false
 let set_output filename =
   output_file := filename;
   output_channel := open_out filename
+
+(* Set the output language to [lang] *)
+let set_language lang =
+  language := (
+    match lang with
+    | "none" | "None" -> No
+    | "dedukti" | "Dedukti" | "dk" | "Dk" -> Dk
+    | _ -> failwith ("unknown output_language: \"" ^ lang ^ "\"")
+  )
+
+(* Get the file extension corresponding to an output language *)
+let extension = function
+  | Dk -> ".dk"
+  | No -> assert false
 
 (** Printf-like function for printing information. *)
 let print_verbose fmt =

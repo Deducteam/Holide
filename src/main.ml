@@ -5,7 +5,8 @@ let show_version () =
   exit 0
 
 let options = Arg.align [
-    "--just-check", Arg.Set(Output.just_check), " Just check, do not translate";
+    "--output-language", Arg.String(Output.set_language), "<language> Set output language. Valid values are: None, Dedukti. Default: Dedukti";
+    "--just-check", Arg.Unit(fun () -> Output.set_language "None"), " Just check, do not translate (Same as --output-language None)";
     "-o", Arg.String(Output.set_output), "<file> Set output filename";
     "--quiet", Arg.Set(Output.quiet), " Suppress all information";
     "--untyped-def", Arg.Set(Output.untyped_def), " Use untyped declarations";
@@ -23,7 +24,7 @@ let () =
   Arg.parse options Input.set_input usage;
   if !Input.input_file = ""
   then fail ();
-  if !Output.output_file = "" && not !Output.just_check
-  then Output.set_output (Filename.chop_extension !Input.input_file ^ ".dk");
+  if !Output.output_file = "" && !Output.language <> Output.No
+  then Output.set_output (Filename.chop_extension !Input.input_file ^ Output.extension !Output.language);
   Article.process_file ()
 

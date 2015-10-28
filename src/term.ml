@@ -189,7 +189,7 @@ let rec translate_term context t =
 (** Declare the constant [c : a]. *)
 let declare_cst c a =
   Output.print_verbose "Declaring constant %s\n%!" c;
-  if not !Output.just_check then (
+  if !Output.language = Output.Dk then (
     let ftv = Type.free_vars [] a in
     let c' = translate_cst c in  
     let ftv' = Type.translate_vars ftv in
@@ -201,7 +201,7 @@ let declare_cst c a =
 (** Define the constant [c : a := t]. *)
 let define_cst c a t =
   Output.print_verbose "Defining constant %s\n%!" c;
-  if not !Output.just_check then (
+  if !Output.language = Output.Dk then (
     let ftv = Type.free_vars [] a in
     let c' = translate_cst c in
     let ftv' = Type.translate_vars ftv in
@@ -213,7 +213,7 @@ let define_cst c a t =
 
 (** Define the term [id := t]. *)
 let define_term t =
-  if not !Output.just_check && not (TermSharing.mem t) then (
+  if !Output.language = Output.Dk && not (TermSharing.mem t) then (
       let a = type_of t in
       let ftv = free_type_vars [] t in
       let fv = free_vars [] t in  

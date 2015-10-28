@@ -223,7 +223,7 @@ let rec translate_thm term_context context ((gamma, p, proof) as thm) =
 (** Declare the axiom [gamma |- p] **)
 let declare_axiom comment (gamma, p) =
   let thm = (gamma, p, Axiom(gamma, p)) in
-  if not !Output.just_check && not (ThmSharing.mem thm) then (
+  if !Output.language = Output.Dk && not (ThmSharing.mem thm) then (
       let ftv = List.fold_left Term.free_type_vars [] (p :: (TermSet.elements gamma)) in
       let fv = List.fold_left Term.free_vars [] (p :: (TermSet.elements gamma)) in
       let ftv' = Type.translate_vars ftv in
@@ -238,7 +238,7 @@ let declare_axiom comment (gamma, p) =
 
 (** Define the theorem [id := thm] *)
 let define_thm comment ?(untyped=false) ((gamma, p, _) as thm) =
-  if not !Output.just_check && not (ThmSharing.mem thm) then (
+  if !Output.language = Output.Dk && not (ThmSharing.mem thm) then (
       let ftv = free_type_vars thm in
       let fv = free_vars thm in
       let ftv' = Type.translate_vars ftv in

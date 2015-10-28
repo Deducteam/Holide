@@ -76,7 +76,7 @@ let translate_vars vars =
 (** Declare the Dedukti term [op : |arity|]. *)
 let declare_op op arity =
   Output.print_verbose "Declaring type operator %s\n%!" op;
-  if not !Output.just_check then (
+  if !Output.language = Output.Dk then (
     let op' = translate_op op in
     let arity' = translate_kind arity in
     Output.print_declaration op' arity');
@@ -84,7 +84,7 @@ let declare_op op arity =
 
 (** Define the Dedukti term [id := |a|]. *)
 let define_type a =
-  if not !Output.just_check && not (TypeSharing.mem a) then (
+  if !Output.language <> Output.No && not (TypeSharing.mem a) then (
       let fv = free_vars [] a in
       let fv' = translate_vars fv in
       let arity' = translate_kind (List.length fv) in
