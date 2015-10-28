@@ -35,9 +35,19 @@ let rec print_term out term =
   | Pie("", a, b) ->
     Printf.fprintf out "%a -> %a" print_applicative a print_term b
   | Pie(x, a, b) ->
-    Printf.fprintf out "%s : %a -> %a" x print_applicative a print_term b
+     (match !Options.language with
+     | Options.No -> ()
+     | Options.Dk ->
+        Printf.fprintf out "%s : %a -> %a" x print_applicative a print_term b
+     | Options.Coq ->
+        Printf.fprintf out "forall (%s : %a), %a" x print_applicative a print_term b)
   | Lam(x, a, b) ->
-    Printf.fprintf out "%s : %a => %a" x print_applicative a print_term b
+     (match !Options.language with
+     | Options.No -> ()
+     | Options.Dk ->
+        Printf.fprintf out "%s : %a => %a" x print_applicative a print_term b
+     | Options.Coq ->
+        Printf.fprintf out "fun (%s : %a) => %a" x print_applicative a print_term b)
   | _ ->
     Printf.fprintf out "%a" print_applicative term
 

@@ -90,16 +90,6 @@ let alpha_equiv t u =
 
 (** Interprestation of special constants **)
 let interpretation = [
-    "Data.Bool.F", (tybool, Name.hol "false");
-    "Data.Bool.T", (tybool, Name.hol "true");
-    "Data.Bool.~", (tyarrow tybool tybool, Name.hol "not");
-    "Data.Bool.==>", (tyarrow tybool (tyarrow tybool tybool), Name.hol "imp");
-    "Data.Bool./\\", (tyarrow tybool (tyarrow tybool tybool), Name.hol "and");
-    "Data.Bool.\\/", (tyarrow tybool (tyarrow tybool tybool), Name.hol "or");
-    "Data.Bool.!", (tyarrow (tyarrow (tyvar "A") tybool) tybool, Name.hol "forall");
-    (* "Data.Bool.?", (tyarrow (tyarrow (tyvar "A") tybool) tybool, Name.hol "exists");
-    "Data.Bool.?!", (tyarrow (tyarrow (tyvar "A") tybool) tybool, Name.hol "exists_unique"); *)
-    "Data.Bool.cond", (tyarrow tybool (tyarrow (tyvar "A") (tyarrow (tyvar "A") (tyvar "A"))), Name.hol "cond");
   ]
 
 let () =
@@ -155,6 +145,17 @@ let translate_var_term context (x, a) =
   with UnboundVariable ->
     Dedukti.app (Dedukti.var (Name.hol "witness")) (Type.translate_type (a))
 
+let mk_lam a a' b x t =
+  let lam = Dedukti.lam (x, a') t in
+  match !Options.language with
+  | No | Dk -> lam
+  | Coq -> Dedukti.apps (Dedukti.var (Name.hol "lam")) [a; b; lam]
+
+let mk_app a b t u =
+  match !Options.language with
+  | No | Dk -> Dedukti.app t u
+  | Coq -> Dedukti.apps (Dedukti.var (Name.hol "app")) [a; b; t; u]
+
 (** Translate the HOL term [t] as a Dedukti term. *)
 let rec translate_term context t =
   try
@@ -177,19 +178,25 @@ let rec translate_term context t =
       let theta' = List.map (fun x -> Type.translate_type (List.assoc x theta)) ftv in
       Dedukti.apps c' theta'
     | Lam((x, a), t) ->
+      let b = type_of t in
+      let a' = Type.translate_type a in
+      let b' = Type.translate_type b in
       let x' = translate_var ((x, a) :: context) (x, a) in
-      let a' = translate_type a in
       let t' = translate_term ((x, a) :: context) t in
-      Dedukti.lam (x', a') t'
+      mk_lam a' (translate_type a) b' x' t'
     | App(t, u) ->
+      let a, b = Type.get_arr (type_of t) in
+      let app' = Dedukti.var (Name.hol "app") in
+      let a' = Type.translate_type a in
+      let b' = Type.translate_type b in
       let t' = translate_term context t in
-      let u' = translate_term context u in 
-      Dedukti.app t' u'
+      let u' = translate_term context u in
+      mk_app a' b' t' u'
 
 (** Declare the constant [c : a]. *)
 let declare_cst c a =
   Output.print_verbose "Declaring constant %s\n%!" c;
-  if !Output.language = Output.Dk then (
+  if !Options.language <> Options.No then (
     let ftv = Type.free_vars [] a in
     let c' = translate_cst c in  
     let ftv' = Type.translate_vars ftv in
@@ -201,7 +208,7 @@ let declare_cst c a =
 (** Define the constant [c : a := t]. *)
 let define_cst c a t =
   Output.print_verbose "Defining constant %s\n%!" c;
-  if !Output.language = Output.Dk then (
+  if !Options.language <> Options.No then (
     let ftv = Type.free_vars [] a in
     let c' = translate_cst c in
     let ftv' = Type.translate_vars ftv in
@@ -213,7 +220,7 @@ let define_cst c a t =
 
 (** Define the term [id := t]. *)
 let define_term t =
-  if !Output.language = Output.Dk && not (TermSharing.mem t) then (
+  if !Options.language <> Options.No && not (TermSharing.mem t) then (
       let a = type_of t in
       let ftv = free_type_vars [] t in
       let fv = free_vars [] t in  

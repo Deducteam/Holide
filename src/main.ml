@@ -5,11 +5,11 @@ let show_version () =
   exit 0
 
 let options = Arg.align [
-    "--output-language", Arg.String(Output.set_language), "<language> Set output language. Valid values are: None, Dedukti. Default: Dedukti";
-    "--just-check", Arg.Unit(fun () -> Output.set_language "None"), " Just check, do not translate (Same as --output-language None)";
-    "-o", Arg.String(Output.set_output), "<file> Set output filename";
-    "--quiet", Arg.Set(Output.quiet), " Suppress all information";
-    "--untyped-def", Arg.Set(Output.untyped_def), " Use untyped declarations";
+    "--output-language", Arg.String(Options.set_language), "<language> Set output language. Valid values are: None, Dedukti. Default: Dedukti";
+    "--just-check", Arg.Unit(fun () -> Options.set_language "None"), " Just check, do not translate (Same as --output-language None)";
+    "-o", Arg.String(Options.set_output), "<file> Set output filename";
+    "--quiet", Arg.Set(Options.quiet), " Suppress all information";
+    "--untyped-def", Arg.Set(Options.untyped_def), " Use untyped declarations";
     "--version", Arg.Unit(show_version), " Print version and exit";
   ]
 
@@ -24,7 +24,7 @@ let () =
   Arg.parse options Input.set_input usage;
   if !Input.input_file = ""
   then fail ();
-  if !Output.output_file = "" && !Output.language <> Output.No
-  then Output.set_output (Filename.chop_extension !Input.input_file ^ Output.extension !Output.language);
+  if !Options.output_file = "" && !Options.language <> Options.No
+  then Options.set_output (Filename.chop_extension !Input.input_file ^ Output.extension !Options.language);
   Article.process_file ()
 
