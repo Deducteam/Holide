@@ -133,7 +133,23 @@ let process_command cmd stack =
       | "var", Type(a) :: Name(x) :: stack -> Var((x, a)) :: stack
       | "varTerm", Var(x) :: stack -> Term(Term.var x) :: stack
       | "varType", Name(x) :: stack -> Type(Type.var x) :: stack
-      | _ -> failwith "invalid command/state"
+
+      (* Version 6 features captured here *)
+      | "pragma", _ :: stack -> stack (*simply ignore it*)
+      | "hdTl" , List(hd :: tail) ::stack -> List(tail):: hd :: stack
+      | "proveHyp", Thm (thm_q) :: Thm (thm_p) :: stack -> Thm(Thm.define_thm "dict" ~untyped:true (Thm.proveHyp thm_q thm_p)) :: stack
+      | "sym", Thm (thm1) :: stack -> Thm (Thm.define_thm "dict" ~untyped:true (Thm.sym thm1)) :: stack
+      | "trans", Thm (thm_t2't3) :: Thm(thm_t1t2) :: stack -> Thm (Thm.define_thm "dict" ~untyped:true (Thm.trans thm_t1t2 thm_t2't3)) :: stack
+      | "version" , _ :: stack -> stack (*ignore the version thing*)
+      (* | "defineConst", Term(t) :: Name(n) :: stack -> Thm(Thm.define_const n t) :: Const(n) :: stack *)
+      | "defineConstList", Thm(thm) :: List(nv_List) :: stack ->
+        (* let () = Printf.printf "defineConstList Used here \n" in  *)
+        let rm_List x = match x with List([Name(n); Var(x,a)]) -> (n, (x,a)) in
+        let nv_list = List.map rm_List nv_List in
+        let const_list x  = match x with List([Name(n); Var(x,a)]) -> Const(n) in
+        let c_list = List.map const_list nv_List in
+        Thm (Thm.define_const_list thm nv_list) :: List(c_list) :: stack
+      | c, _ -> failwith (Printf.sprintf "invalid command/state: %s" c)
 
 (** Read and process the article file. *)
 let process_file () =

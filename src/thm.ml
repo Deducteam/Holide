@@ -32,6 +32,9 @@ and proof =
   | BetaConv of Term.var * Term.term * Term.term
   | Subst of (Type.var * Type.hol_type) list * (Term.var * Term.term) list * thm
   | DefineConst of Term.cst * Term.term
+  | ProveHyp of thm * thm (*version 6*)
+  | Sym of thm
+  | Trans of thm * thm
 
 (** Check the the term [p] has a [bool] type. *)
 let check_prop p =
@@ -139,7 +142,7 @@ let rec translate_thm term_context context ((gamma, p, proof) as thm) =
       let thm_p' = Dedukti.lam (hq', translate_prop term_context q) (translate_thm term_context (q :: context) thm_p) in
       let thm_q' = Dedukti.lam (hp', translate_prop term_context p) (translate_thm term_context (p :: context) thm_q) in
       Dedukti.apps prop_ext' [p'; q'; thm_p'; thm_q']
-    
+
     | EqMp(((_, pq, _) as thm_pq), ((_, p, _) as thm_p)) ->
       let _, q = Term.get_eq pq in
       let eq_mp' = Dedukti.var (Name.hol "EQ_MP") in
@@ -148,7 +151,47 @@ let rec translate_thm term_context context ((gamma, p, proof) as thm) =
       let thm_p' = translate_thm term_context context thm_p in
       let thm_pq' = translate_thm term_context context thm_pq in
       Dedukti.apps eq_mp' [p'; q'; thm_pq'; thm_p']
-    
+
+    | Trans (((_, t1t2, _) as thm1), ((_, t2t3, _) as thm2)) ->
+      let t1, t2 = Term.get_eq t1t2 in
+      let t2',t3 = Term.get_eq t2t3 in
+      let a = Term.type_of t1 in
+      let a' = Type.translate_type a in
+      if Term.compare t2 t2' <> 0 then failwith "failed at Trans" else
+      let trans' = Dedukti.var (Name.hol "TRANS") in
+      let t1' = Term.translate_term term_context t1 in
+      let t2' = Term.translate_term term_context t2 in
+      let t3' = Term.translate_term term_context t3 in
+      let thm1' = translate_thm term_context context thm1 in
+      let thm2' = translate_thm term_context context thm2 in
+      Dedukti.apps trans' [a'; t1'; t2'; t3'; thm1'; thm2']
+
+    | Sym ((_, p, _) as thm_p) ->
+      let l, r = Term.get_eq p in
+      let l' = Term.translate_term term_context l in
+      let r' = Term.translate_term term_context r in
+      let a = Term.type_of l in
+      let b = Term.type_of r in
+      if a <> b then failwith "SYM: failed at Sym because they are not of the same type" else
+      (* let a' = Term.translate_type a in _------- dobule bar *)
+      let a' = Type.translate_type a in (*this should be a Type.translate_type not Term.translate*)
+      let thm_p' = translate_thm term_context context thm_p in
+      let sym' = Dedukti.var (Name.hol "SYM") in
+      Dedukti.apps sym' [a'; l'; r'; thm_p']
+
+    | ProveHyp (((_, q, _) as thm_q), ((_, p, _) as thm_p)) -> (*t1= psi; t2 = phy*)
+      (* let () = Printf.printf "\n\n Let me print a line to see what it is \n\n\n" in  *)
+      let ph' = Dedukti.var (Name.hol "PROVE_HYP") in
+      let q' = Term.translate_term term_context q in
+      let p' = Term.translate_term term_context p in
+      (* let hu' = translate_hyp (t1 :: context) t1 in  *)
+      let a' = translate_prop term_context p in (*should be p*)
+      let x' = translate_hyp (p :: context) p in (* x is $h_{t1}$ here*)
+      let thm_p' = (translate_thm term_context context thm_p) in
+      let thm_q' = (translate_thm term_context (p :: context) thm_q) in (*add the t1 back to A2*)
+      let thm_q'' = Dedukti.lam (x', a') thm_q' in
+      Dedukti.apps ph' [p'; q'; thm_p'; thm_q'']
+
     | BetaConv((x, a), t, u) ->
       let b = Term.type_of t in
       let beta_conv' = Dedukti.var (Name.hol "BETA_CONV") in
@@ -241,6 +284,23 @@ let eq_mp ((gamma, pq, _) as thm_pq) ((delta, p, _) as thm_p) =
   if Term.compare p p' <> 0 then failwith "eq_mp : terms must be alpha-equivalent";
   (TermSet.union gamma delta, q, EqMp(thm_pq, thm_p))
 
+(* version 6*)
+
+let sym ((delta, t, _) as thm1) =
+  let p, q = Term.get_eq t in
+  (delta, Term.eq q p, Sym thm1)
+
+let proveHyp ((delta, psi, _) as thm_q) ((gamma, phy, _) as thm_p) =
+  let asl = TermSet.union gamma (TermSet.remove phy delta) in (*and deduce psi*)
+  (asl, psi, ProveHyp (thm_q,thm_p))
+
+let trans  ((delta, t12, _) as thm1) ((gamma, t23, _) as thm2) =
+  let t1, t2 = Term.get_eq t12 in
+  let t2', t3 = Term.get_eq t23 in
+  if Term.compare t2 t2' <> 0 then failwith "trans: terms must be alpha-equivalent" ;
+  let t = Term.eq t1 t3 in
+  ((TermSet.union delta gamma), t, Trans (thm1,thm2))
+
 let beta_conv x t u =
   (TermSet.empty, Term.eq (Term.app (Term.lam x t) u) (Term.subst [x, u] t), BetaConv(x, t, u))
 
@@ -257,6 +317,46 @@ let define_const c t =
     let () = Term.define_cst c a t in
     (TermSet.empty, Term.eq (Term.cst c a) t, Refl (Term.cst c a))
 
+let define_const_list ((delta, psi, _) as thm1) (nv_list :  (Term.cst * Term.var) list) = (* *)
+  if TermSet.cardinal delta <> List.length nv_list then failwith "define_const_list: length not equal"
+  else 
+         (* the following declare constants *)
+    let findfilter v setele = (*find out the t in the set of element (v,t)*)
+      let (v',t) = Term.get_eq setele in 
+      if Term.compare (Term.Var(v)) v' == 0 then true else false 
+    in  
+    let f (nv :  (Term.cst * Term.var)) =
+      let (n, v) = nv in 
+      let sg = TermSet.filter (findfilter v) delta in 
+      if TermSet.cardinal sg == 1 then (*this size should be one!!!*)
+      let e = TermSet.min_elt sg in  
+      let (v', t) = Term.get_eq e in 
+      (*do I actually need this????*)
+      let () = Printf.printf "defineConstList defined_here \n"  in 
+      let x = define_const n t in 
+        ()
+      in 
+    List.map f (nv_list :  (Term.cst * Term.var) list); (*declare constants ??*)
+
+    let g  (nv :  (Term.cst * Term.var)) =
+      let (n, v') = nv in 
+      let sg = TermSet.filter (findfilter v') delta in 
+      (* if TermSet.cardinal sg == 0 then *)
+      let e = TermSet.min_elt sg in  
+      let (v, t) = Term.get_eq e  in 
+      let a = Term.type_of t in 
+      let c = Term.cst n a in 
+      (v', c) in 
+
+    let sigma = List.map g nv_list in 
+    let s = Term.subst sigma in 
+    (* subst [] sigma thm1 *)
+    (* define an axiom ??? *)
+    (* let k = DefineConstList(thm1, nv_list) in  *)
+    (* (TermSet.empty, s psi, k) *)
+    declare_axiom "defineConstList" (TermSet.empty, s psi)
+
+
 let define_type_op op abs rep tvars (gamma, pt, _) =
   if not (TermSet.is_empty gamma) then failwith "type definition contains hypotheses";
   match pt with
@@ -270,10 +370,25 @@ let define_type_op op abs rep tvars (gamma, pt, _) =
     Term.declare_cst rep (Type.arr b a);
     let abs = Term.cst abs (Type.arr a b) in
     let rep = Term.cst rep (Type.arr b a) in
-    let var_a = Term.var ("a", b) in
-    let var_r = Term.var ("r", a) in
-    (declare_axiom "defineTypeOp" (TermSet.empty, Term.eq (Term.app abs (Term.app rep var_a)) var_a),
-     declare_axiom "defineTypeOp" (TermSet.empty, Term.eq (Term.app p var_r) (Term.eq (Term.app rep (Term.app abs var_r)) var_r)))
+    let va = ("a", b) in 
+    let var_a = Term.var va in
+    let vr = ("r", a) in 
+    let var_r = Term.var vr in
+
+    let lamvaa = Term.lam va var_a in 
+    let term_lama = Term.lam va (Term.app abs (Term.app rep var_a)) in 
+    let eq1 = Term.eq term_lama lamvaa in 
+
+    let term_pr = (Term.app p var_r) in 
+    let term_lamr1 = Term.lam vr term_pr in 
+    let term_rep = Term.eq (Term.app rep (Term.app abs var_r)) var_r in
+    let term_lamr2 = Term.lam vr term_rep in 
+    let eq2 = Term.eq term_lamr2 term_lamr1 in 
+    (* (declare_axiom "defineTypeOp" (TermSet.empty, Term.eq (Term.app abs (Term.app rep var_a)) var_a), *)
+    (* declare_axiom "defineTypeOp" (TermSet.empty, Term.eq (Term.app p var_r) (Term.eq (Term.app rep (Term.app abs var_r)) var_r))) *)
+    (* (λr. rep (abs r) = r) = λr. φ r  *)
+    (declare_axiom "defineTypeOp" (TermSet.empty, eq1),
+     declare_axiom "defineTypeOp" (TermSet.empty, eq2)) 
   | _ -> failwith "ill-formed type definition"
 
 let rec sprint_thm () (gamma, p, _) =

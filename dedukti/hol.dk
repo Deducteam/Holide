@@ -48,6 +48,49 @@ def BETA_CONV : a : type -> b : type -> f : (term a -> term b) -> u : term a ->
     a : type => b : type => f : (term a -> term b) => u : term a =>
     REFL b (f u).
 
+def SYM (a : type) (t : term a) (u : term a) (H : proof (eq a t u)) : proof (eq a u t)
+:=
+  EQ_MP
+    (eq a t t)
+    (eq a u t)
+    (APP_THM
+      a
+      bool
+      (eq a t)
+      (eq a u)
+      t
+        t
+        (APP_THM
+          a
+          (arr a bool)
+          (eq a)
+          (eq a)
+          t
+            u
+            (REFL (arr a (arr a bool)) (eq a))
+            H)
+        (REFL a t))
+    (REFL a t).
+
+def TRANS (a : type) (t : term a) (u : term a) (v : term a) (H1 : proof (eq a t u)) (H2 : proof (eq a u v)) : proof (eq a t v)
+:=
+  EQ_MP
+    (eq a u v)
+    (eq a t v)
+    (APP_THM
+      a
+      bool
+      (eq a u)
+      (eq a t)
+      v
+        v
+        (APP_THM a (arr a bool) (eq a) (eq a) u t (REFL (arr a (arr a bool)) (eq a)) (SYM a t u H1))
+        (REFL a v))
+    H2.
+
+def PROVE_HYP (x : term bool) (y : term bool) (H1 : proof x) (H2 : proof x -> proof y) : proof y := H2 H1.
+
+
 (;---------------------;)
 (; Derived Connectives ;)
 (;---------------------;)
