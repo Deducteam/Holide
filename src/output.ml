@@ -41,7 +41,7 @@ let print_definition ?(opaque=false) ?(untyped=false) x a b =
   | Options.Dk ->
      Printf.fprintf chan "\n";
      if opaque
-     then Printf.fprintf chan "{%s}" x
+     then Printf.fprintf chan "thm %s" x
      else Printf.fprintf chan "def %s" x;
      if not untyped
      then Printf.fprintf chan " : %a" Dedukti.print_term a;
