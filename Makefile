@@ -66,6 +66,8 @@ BUILD = $(OCAMLBUILD) \
 # Main targets #
 ################
 
+default: holide compile-theory
+
 holide:
 	$(BUILD) main.native
 	ln -sf build/src/main.native holide
@@ -147,9 +149,12 @@ test-compile-stdlib:
 	time $(MAKE) compile-stdlib
 
 # Only works if you have the opentheory package manager
-$(STDLIB_ART): opentheory/%.art:
+$(STDLIB_ART): opentheory/%.art: opentheory
 	$(OPENTHEORY) install $*
 	$(OPENTHEORY) info --article -o $@ $*
+
+opentheory:
+	mkdir -p opentheory
 
 $(STDLIB_DK): dedukti/%.dk: opentheory/%.art
 	./holide $< -o $@

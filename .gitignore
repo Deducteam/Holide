@@ -1,9 +1,3 @@
 holide
 build
-opentheory/*
-dedukti/*
-twelf/*
-coq/*
-!dedukti/hol.dk
-!twelf/hol.elf
-!coq/hol.v
+opentheory
