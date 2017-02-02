@@ -75,7 +75,8 @@ holide:
 
 install: holide $(THEORY_DKO)
 	install holide $(INSTALL_DIR)
-	install $(THEORY_DKO) $(LIBINSTALL_DIR)
+	mkdir -p $(LIBINSTALL_DIR)/dedukti
+	install $(THEORY_DKO) $(LIBINSTALL_DIR)/dedukti
 
 uninstall:
 	rm -f $(INSTALL_DIR)/holide
