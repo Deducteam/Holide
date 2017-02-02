@@ -20,7 +20,8 @@ LIBS        = str
 SOURCE_DIR  = src
 BUILD_DIR   = build
 
-INSTALL_DIR = /usr/local/bin/
+INSTALL_DIR = /usr/local/bin
+LIBINSTALL_DIR = /usr/local/lib
 
 # Components of the HOL theory
 THEORY = hol
@@ -66,17 +67,19 @@ BUILD = $(OCAMLBUILD) \
 # Main targets #
 ################
 
-default: holide compile-theory
+default: holide $(THEORY_DKO)
 
 holide:
 	$(BUILD) main.native
 	ln -sf build/src/main.native holide
 
-install: holide
+install: holide $(THEORY_DKO)
 	install holide $(INSTALL_DIR)
+	install $(THEORY_DKO) $(LIBINSTALL_DIR)
 
 uninstall:
-	rm $(INSTALL_DIR)holide
+	rm -f $(INSTALL_DIR)/holide
+	rm -f $(LIBINSTALL_DIR)/$(THEORY_DKO)
 
 # Only works if you have the opentheory package manager
 get-stdlib: $(STDLIB_ART)
