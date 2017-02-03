@@ -1,4 +1,4 @@
-let version = "0.2.1"
+let version = "0.2.2"
 
 let show_version () =
   Printf.printf "Holide HOL to Dedukti translator, version %s\n" version;
