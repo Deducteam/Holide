@@ -1,0 +1,75 @@
+Opentheory a deux formats: un pour les théories et un pour les
+articles. De plus, un article peut-être standalone ou faire références
+à d'autres. Holide ne traduit que les articles standalone. Pour
+générer un article standalone à partir d'un article non-standalone:
+
+opentheory install <module>
+
+holide échoue sur <opentheory_dir>/packages/<module>-<version>/<module>-<version>.art
+
+il faut générer un article opentheory standalone en faisant:
+
+opentheory info --article -o file.art <module>
+
+exemple:
+
+opentheory install natural # 68 Ko
+
+opentheory info --article -o natural.art natural # 1800 Ko
+
+=> on pourrait imaginer rendre holide plus modulaire en faisant en sorte qu'il puisse traduire des fichiers .art contenant des dépendances
+
+------------------------------------------------------------------------------
+> Dans holide, il y a de nombreuses branches:
+>
+> Serait-il possible de m'expliquer brièvement à quoi servent ou ont
+> servi ces différentes branches
+
+Je vais répondre pour celles que j'ai créées ou sur lesquelles j'ai
+participé significativement
+
+>   remotes/origin/develop
+
+C'est la branche de développement.
+
+>   remotes/origin/holala
+
+C'est la branche qui correspond à la contribution de Robert (mais les
+commits sont à mon nom parce que Robert n'a pas utilisé le dépôt git de
+Holide). Cette branche est en avance sur develop.
+
+>   remotes/origin/Coq
+>   remotes/origin/Twelf
+
+Ce sont des feature branches pour les sorties Coq et Twelf, elles ont
+été mergées dans develop.
+
+>   remotes/origin/LF
+
+Cette branche est un fork de Ronan, je crois que c'est une traduction
+vers Dedukti qui n'utilise pas la réécriture.
+
+>   remotes/origin/dedukti-interop
+
+C'est la branche qui correspond au paquet holide.interop
+
+------------------------------------------------------------------------------
+> 13:27 ~/src/holide-git ./holide
+> Usage: ./holide <options> <file>
+>
+>   --output-language <language> Set output language. Valid values are:
+> None, Dedukti, Coq, and Twelf. Default: Dedukti
+>
+> Les sorties Coq et Twelf marche-t-elle? Avec quelles versions? Qui les
+> a développé?
+
+Aux dernières nouvelles elles fonctionnaient et n'utilisaient que très
+peu des fonctionnalités de Coq et Twelf donc elles devraient peu subir
+les changements de version de Coq et Twelf.
+
+Elles ont principalement été développées par Ali mais il aurait
+probablement du mal à se retrouver dans le code parce que j'ai pas mal
+changé l'architecture d'Holide pour permettre d'avoir cette option
+plutôt que de devoir changer de branche. J'ai aussi développé une sortie
+très expérimentale (comprendre : aucun fichier produit n'a jamais été
+validé) vers Focalide sur la branche Holala.
