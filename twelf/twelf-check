@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+. ../.config_vars
 
-(echo "set chatter 0"; for file in $@; do echo "loadFile $file"; done) | twelf-server
+(echo "set chatter 0"; for file in $@; do echo "loadFile $file"; done) | "$TWELFSERVER"
 

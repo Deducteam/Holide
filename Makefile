@@ -3,11 +3,8 @@
 #############
 
 SHELL      = bash
-OCAMLBUILD = ocamlbuild
-DEDUKTI    = dkcheck    # (optional)
-COQC       = coqc       # (optional)
 TWELF      = ./twelf-check
-OPENTHEORY = opentheory # (optional)
+include .config_vars
 
 #################
 # Configuration #
@@ -197,3 +194,5 @@ $(STDLIB_ELC): twelf/%.elc: twelf/%.elf $(THEORY_ELF)
 # Prevent make from deleting intermediary files.
 .SECONDARY:
 
+.config_vars: configure
+	bash configure

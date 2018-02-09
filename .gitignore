@@ -4,6 +4,7 @@ opentheory
 dedukti
 twelf
 coq
+.config_vars
 !dedukti/hol.dk
 !twelf/hol.elf
 !coq/hol.v
