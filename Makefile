@@ -154,7 +154,7 @@ test-compile-stdlib:
 
 # Only works if you have the opentheory package manager
 $(STDLIB_ART): opentheory/%.art: opentheory
-	$(OPENTHEORY) install $*
+	( $(OPENTHEORY) list | grep $* &2> ) || $(OPENTHEORY) install $*
 	$(OPENTHEORY) info --article -o $@ $*
 
 opentheory:
