@@ -129,13 +129,13 @@ find_binary_and_version () {
     # $1 and $2 are arguments to find_binary
     # $3 is the variable name
     # $4 is the option to pass to the program to ask for its version
-    A=$(find_binary $1 $2)
-    VARS[$3]="$A"
-    VERSION_COMMAND="$A $4"
-    print_to_stderr "Asking '$1' for its version number."
-    B=$(eval $VERSION_COMMAND |& cat)
-    print_to_stderr "Program '$1' has version '$B'."
-    VERSIONS[$3]="$B"
+    A=$(find_binary $1 $2) &&
+    VARS[$3]="$A" &&
+    VERSION_COMMAND="$A $4" &&
+    print_to_stderr "Asking '$1' for its version number." &&
+    B=$(eval $VERSION_COMMAND |& cat) &&
+    print_to_stderr "Program '$1' has version '$B'." &&
+    VERSIONS[$3]="$B" &&
     print_to_file "$3=\"$A\""
 }
 
