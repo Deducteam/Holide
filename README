@@ -8,7 +8,7 @@ OpenTheory article format version 6
 files for the Dedukti proof checker.
 
 The source code is available online at:
-https://gforge.inria.fr/projects/holide/
+https://github.com/Deducteam/Holide
 
 You need OCaml to compile it. To compile, simply run 'make' in the main
 directory.
@@ -43,7 +43,7 @@ For more information on OpenTheory, visit:
 http://www.gilith.com/research/opentheory/
 
 For more information on Dedukti, visit:
-https://dedukti.gforge.inria.fr/
+https://deducteam.github.io
 
 For feedback or bug reports, please send an email to:
 dedukti-dev@inria.fr
