@@ -20,6 +20,24 @@ opentheory info --article -o natural.art natural # 1800 Ko
 => on pourrait imaginer rendre holide plus modulaire en faisant en sorte qu'il puisse traduire des fichiers .art contenant des dépendances
 
 ------------------------------------------------------------------------------
+How to install opentheory and some of its packages?
+
+# install mlton
+sudo apt-get install mlton
+
+# get opentheory
+git clone https://github.com/gilith/opentheory.git
+
+# compile opentheory
+cd opentheory
+make init
+
+# install opentheory packages (see list in Makefile)
+bin/mlton/opentheory install base
+bin/mlton/opentheory install char
+...
+
+------------------------------------------------------------------------------
 > Dans holide, il y a de nombreuses branches:
 >
 > Serait-il possible de m'expliquer brièvement à quoi servent ou ont
