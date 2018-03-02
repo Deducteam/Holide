@@ -3,7 +3,7 @@ HOLIDE
 
 [![Build Status](https://travis-ci.org/Deducteam/Holide.svg?branch=master)](https://travis-ci.org/Deducteam/Holide)
 
-Holide is an HOL to Dedukti translator. It accepts files in the
+Holide is an HOL to Dedukti translator. It accepts STANDALONE files in the
 OpenTheory article format version 6
 (http://www.gilith.com/research/opentheory/article.html) and produces
 files for the Dedukti proof checker.
@@ -40,8 +40,9 @@ it with Dedukti, do:
 
 There are many ways to obtain proofs in the OpenTheory format. If you
 have the opentheory tool installed, you can automatically export and
-translate some theories of the OpenTheory standard library using `make
-stdlib`.
+translate some theories of the OpenTheory standard library using:
+
+`make stdlib`.
 
 For more information on OpenTheory, visit:
 http://www.gilith.com/research/opentheory/
