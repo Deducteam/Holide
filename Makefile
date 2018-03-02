@@ -25,18 +25,8 @@ THEORY = hol
 
 # Components of the OpenTheory standard library
 # (needs the opentheory package manager if you don't have the article files)
-STDLIB =\
-  unit\
-  bool\
-  pair\
-  function\
-  natural\
-  set\
-  list\
-  option\
-  real\
-  relation\
-  sum
+STDLIB = unit bool pair function natural set list option real relation sum\
+  gfp modular byte word probability parser
 
 #######################
 # Derived definitions #
@@ -88,7 +78,9 @@ compile-theory: $(THEORY_DKO) $(THEORY_VO) $(THEORY_ELC)
 
 compile-stdlib: $(STDLIB_DKO) $(STDLIB_VO) $(STDLIB_ELC)
 
-all: holide get-stdlib translate-stdlib compile-theory compile-stdlib
+all: holide compile-theory stdlib
+
+stdlib: get-stdlib translate-stdlib compile-stdlib
 
 test: test-all
 
