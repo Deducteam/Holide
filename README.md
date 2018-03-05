@@ -3,7 +3,7 @@ HOLIDE
 
 [![Build Status](https://travis-ci.org/Deducteam/Holide.svg?branch=master)](https://travis-ci.org/Deducteam/Holide)
 
-Holide is an HOL to Dedukti translator. It accepts STANDALONE files in the
+Holide is an HOL to Dedukti translator. It accepts files in the
 OpenTheory article format version 6
 (http://www.gilith.com/research/opentheory/article.html) and produces
 files for the Dedukti proof checker.
