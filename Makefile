@@ -25,8 +25,21 @@ THEORY = hol
 
 # Components of the OpenTheory standard library
 # (needs the opentheory package manager if you don't have the article files)
-STDLIB = unit bool pair function natural set list option real relation sum\
-  gfp modular byte word probability parser
+STDLIB =\
+  axiom-choice\
+  axiom-extensionality\
+  bool\
+  function\
+  axiom-infinity\
+  natural\
+  pair\
+  set\
+  list\
+  option\
+  real\
+  relation\
+  sum\
+  unit
 
 #######################
 # Derived definitions #
