@@ -1,5 +1,11 @@
 (** HOL terms and their translation to Dedukti. *)
 
+(** Debugging *)
+
+let declared = ref []
+
+let in_type_op = ref ([] : string list)
+
 (** Term variables are annotated by their type, as different variables can have
     the same name but different type. *)
 type var = string * Type.hol_type
@@ -14,6 +20,8 @@ type term =
   | Lam of var * term
   | App of term * term
 
+let dummy_term = Var ("dummy",Type.dummy_type)
+
 (** Type alias to satisfy the OrderedType interface used by sets and maps *)
 type t = term
 
@@ -21,11 +29,32 @@ let tyvar x = Type.Var(x)
 let tybool = Type.App("bool", [])
 let tyarrow a b = Type.App("->", [a; b])
 
+let rec sprint_term () t =
+  match t with
+  | Var (x, _) ->
+    Printf.sprintf "%s" x
+  | Cst (c, _) ->
+    Printf.sprintf "%s" c
+  | Lam ((x, _), t) ->
+    Printf.sprintf "\\lambda %s. %a" x sprint_term t
+  | App (t, u) ->
+    Printf.sprintf "(%a %a)" sprint_term t sprint_term u
+
+let sprint_list_term lt =
+	let rec sprint_list_term_rec = function
+	 [] 		-> ""
+	| t::ltq	-> String.concat "" [(sprint_term () t);"\n";(sprint_list_term_rec ltq)]
+	in
+	String.concat "" ["[";sprint_list_term_rec lt;"]"]
+
 (** Type schemes of the declared constants *)
-let csts = ref [
+
+let base_csts = [
     "=", Type.App("->", [Type.Var("A"); Type.App("->", [Type.Var("A"); Type.App("bool", [])])]);
     "select", Type.App("->", [Type.App("->", [Type.Var("A"); Type.App("bool", [])]); Type.Var("A")]);
   ]
+
+let csts = ref base_csts
 
 let is_declared c = List.mem_assoc c !csts
 
@@ -88,12 +117,41 @@ let alpha_equiv t u =
 
 (** Translation *)
 
-(** Interprestation of special constants **)
-let interpretation = [
+(** Interpretation of special constants **)
+let base_interpretation = [
+  ("Data.Bool./\\",(Type.App ("->",[Type.App ("bool",[]);Type.App ("->",[Type.App ("bool",[]);Type.App ("bool",[])])]),"hol.and"));
+  ("Data.Bool.\\/",(Type.App ("->",[Type.App ("bool",[]);Type.App ("->",[Type.App ("bool",[]);Type.App ("bool",[])])]),"hol.or"));
+  ("Data.Bool.==>",(Type.App ("->",[Type.App ("bool",[]);Type.App ("->",[Type.App ("bool",[]);Type.App ("bool",[])])]),"hol.imp"));
+  ("Data.Bool.T",(Type.App ("bool",[]),"hol.true"));
+  ("Data.Bool.F",(Type.App ("bool",[]),"hol.false"));
+  ("Data.Bool.~",(Type.App ("->",[Type.App ("bool",[]);Type.App ("bool",[])]),"hol.not"));
+  ("Data.Bool.!",(Type.App ("->",[Type.App ("->",[Type.Var "A";Type.App ("bool",[])]);Type.App ("bool",[])]),"hol.forall"));
+  ("Data.Bool.?",(Type.App ("->",[Type.App ("->",[Type.Var "A";Type.App ("bool",[])]);Type.App ("bool",[])]),"hol.exists"))
   ]
 
+let interpretation = ref base_interpretation
+
 let () =
-  List.iter (fun (c, (a, c')) -> csts := (c, a) :: !csts) interpretation
+  List.iter (fun (c, (a, c')) -> csts := (c, a) :: !csts) !interpretation
+
+
+(** Keep track of constants' definition *)
+
+let defined_csts = Hashtbl.create 100
+
+let add_cst (c:cst) (a:Type.hol_type) = Hashtbl.add defined_csts c (a,Name.escape (Input.get_module_name()))
+
+let add_dep_cst (cst:string) =
+	try
+		let prov_cst = snd (Hashtbl.find defined_csts cst) in
+		let mod_name = Name.escape (Input.get_module_name()) in
+		let deps_mod_name = Hashtbl.find_all Type.deps mod_name in
+		if not (List.mem prov_cst deps_mod_name) then
+			Hashtbl.add Type.deps mod_name prov_cst
+		else ()
+	with Not_found -> ()
+
+(** Sharing of terms *)
 
 module TermSharing = Sharing.Make(
   struct
@@ -121,13 +179,17 @@ let translate_cst c =
   | "select" -> Name.hol "select"
   | _ ->
     begin
-      try snd (List.assoc c interpretation) with
+      try snd (List.assoc c !interpretation) with
       | Not_found -> Name.escape c
     end
 
 (** Translate the HOL type [a] as a Dedukti type. *)
 let translate_type a =
   Dedukti.app (Dedukti.var (Name.hol "term")) (Type.translate_type a)
+
+(** Translate the HOL type [a] as a Dedukti type with substitution. *)
+let translate_type_ws theta a =
+  Dedukti.app (Dedukti.var (Name.hol "term")) (Type.translate_type_ws theta a)
 
 (** Translate the list of term variables [x1, a1; ...; xn, an]
     into the Dedukti terms [x1 : ||a1||; ...; xn : ||an||] and add them to
@@ -145,16 +207,32 @@ let translate_var_term context (x, a) =
   with UnboundVariable ->
     Dedukti.app (Dedukti.var (Name.hol "witness")) (Type.translate_type (a))
 
+(** Same with a substitution. *)
+let translate_var_term_ws context (x, a) theta =
+  try Dedukti.var (translate_var context (x, a))
+  with UnboundVariable ->
+    Dedukti.app (Dedukti.var (Name.hol "witness")) (Type.translate_type_ws theta (a))
+
 let mk_lam a a' b x t =
   let lam = Dedukti.lam (x, a') t in
   match !Options.language with
   | Options.No | Options.Dk -> lam
   | Options.Coq | Options.Twelf -> Dedukti.apps (Dedukti.var (Name.hol "lam")) [a; b; lam]
 
+let get_lam p =
+  match p with
+  Lam (x,bod) -> (x,bod)
+  | _ -> failwith "Not a lambda-abstraction"
+
 let mk_app a b t u =
   match !Options.language with
   | Options.No | Options.Dk -> Dedukti.app t u
   | Options.Coq | Options.Twelf -> Dedukti.apps (Dedukti.var (Name.hol "app")) [a; b; t; u]
+
+let get_app p =
+  match p with
+  App (t,u) -> (t,u)
+  | _ -> failwith "Not an application"
 
 (** Translate the HOL term [t] as a Dedukti term. *)
 let rec translate_term context t =
@@ -192,17 +270,74 @@ let rec translate_term context t =
       let u' = translate_term context u in
       mk_app a' b' t' u'
 
+
+(** Translate the HOL term [t] as a Dedukti term with an additional substitution. *)
+let rec translate_term_ws context t theta =
+  try
+    let id = TermSharing.find t in
+    let ftv = free_type_vars [] t in
+    let fv = free_vars [] t in
+    let id' = Dedukti.var (translate_id id) in
+    let ftv' = List.map (fun x -> if List.mem x theta then Dedukti.var "hol.bool" else Dedukti.var (Type.translate_var x)) ftv in
+    let fv' = List.map (fun x -> translate_var_term_ws context x theta) fv in
+    Dedukti.apps (Dedukti.apps id' ftv') fv'
+  with Not_found ->
+    match t with
+    | Var(x) ->
+      translate_var_term_ws context x theta
+    | Cst(c, a) ->
+      let b = List.assoc c !csts in
+      let ftv = Type.free_vars [] b in
+      let theta' = Type.match_type [] a b in
+      let c' = Dedukti.var (translate_cst c) in
+      let theta'' = List.map (fun x -> Type.translate_type_ws theta (List.assoc x theta')) ftv in
+      Dedukti.apps c' theta''
+    | Lam((x, a), t) ->
+      let b = type_of t in
+      let a' = Type.translate_type_ws theta a in
+      let b' = Type.translate_type_ws theta b in
+      let x' = translate_var ((x, a) :: context) (x, a) in
+      let t' = translate_term_ws ((x, a) :: context) t theta in
+      mk_lam a' (translate_type_ws theta a) b' x' t'
+    | App(t, u) ->
+      let a, b = Type.get_arr (type_of t) in
+      let a' = Type.translate_type_ws theta a in
+      let b' = Type.translate_type_ws theta b in
+      let t' = translate_term_ws context t theta in
+      let u' = translate_term_ws context u theta in
+      mk_app a' b' t' u'
+
+
+let import_cst c =
+  let () = add_dep_cst c in
+  let c_type,c_module = Hashtbl.find defined_csts c in
+  Output.print_verbose "Importing constant %s\n%!" c;
+  if !Options.language <> Options.No then (
+	let c_name = String.concat "." [c_module;Name.escape c] in
+	let c' = translate_cst c in
+	let c_def = Dedukti.Var c_name in
+	Output.print_comment (Printf.sprintf "Constant %s" c);
+	Output.print_dependancy c' c_def);
+  csts := (c, c_type) :: !csts
+
 (** Declare the constant [c : a]. *)
 let declare_cst c a =
-  Output.print_verbose "Declaring constant %s\n%!" c;
+  Output.print_verbose "Warning: using constant %s, undeclared in this module\n%!" c;
+  if ((Hashtbl.mem defined_csts c) &&
+	(snd (Hashtbl.find defined_csts c) <> Name.escape (Input.get_module_name())))
+	then import_cst c
+  else
+  (Output.print_verbose "Declaring constant %s\n%!" c;
   if !Options.language <> Options.No then (
-    let ftv = Type.free_vars [] a in
-    let c' = translate_cst c in  
-    let ftv' = Type.translate_vars ftv in
-    let a' = Dedukti.pies ftv' (translate_type a) in
-    Output.print_comment (Printf.sprintf "Constant %s" c);
-    Output.print_declaration c' a');
-  csts := (c, a) :: !csts
+	let ftv = Type.free_vars [] a in
+	let () = declared := (c,Name.escape (Input.get_module_name()))::!declared in
+	let c' = translate_cst c in  
+	let ftv' = Type.translate_vars ftv in
+	let a' = Dedukti.pies ftv' (translate_type a) in
+	Output.print_comment (Printf.sprintf "Constant %s" c);
+	Output.print_declaration c' a');
+  csts := (c, a) :: !csts)
+
 
 (** Define the constant [c : a := t]. *)
 let define_cst c a t =
@@ -216,6 +351,7 @@ let define_cst c a t =
     Output.print_comment (Printf.sprintf "Constant %s" c);
     Output.print_definition c' a' t');
   csts := (c, a) :: !csts
+
 
 (** Define the term [id := t]. *)
 let define_term t =
@@ -238,9 +374,10 @@ let var x = Var(x)
 
 let cst c a =
   (* Check first if the constant is declared. *)
-  if not (is_declared c) then (
-    Output.print_verbose "Warning: using undeclared constant %s\n%!" c;
+  if (not (is_declared c))  then (
     (* Cannot assume the time of [c] is [a], as it can be more general. *)
+    if c = "=" then failwith "Equality should be declared";
+    if c = "select" then failwith "Selection should be declared";
     declare_cst c (Type.var "A"));
   (Cst(c, a))
 
@@ -256,6 +393,15 @@ let select p =
   let a, b = Type.get_arr (type_of p) in
   app (cst "select" (Type.arr (Type.arr a b) (Type.bool ()))) p
 
+let mk_bin_op op t1 t2 =
+  app (app (cst op (Type.arr (Type.bool()) (Type.arr (Type.bool()) (Type.bool ())))) t1) t2
+
+let mk_op op t =
+  app (cst op (Type.arr (Type.bool()) (Type.bool ()))) t
+
+let mk_bind op p =
+  app (cst op (Type.arr (type_of p) (Type.bool ()))) p
+
 let get_eq t =
   match t with
   | App(App(Cst("=", _), t), u) -> (t, u)
@@ -265,6 +411,17 @@ let get_select t =
   match t with
   | App(Cst("select", _), p) -> p
   | _ -> failwith "Not a select operation"
+
+let get_bin_op op t =
+  match t with
+  | App(App(Cst(cop, _), t), u) when cop = op -> (t, u)
+  | _ -> failwith "Not an application of given binary operator"
+
+let get_un_op op t =
+  match t with
+  | App(Cst(cop, _), p) when cop = op -> p
+  | _ -> failwith "Not an application of given unary operator"
+
 
 (* We define the following functions after the translation as we might want to
    use sharing or smart constructors. *)
@@ -302,13 +459,8 @@ let subst sigma t =
     | App(t, u) -> app (subst fv sigma t) (subst fv sigma u) in
   subst fv sigma t
 
-let rec sprint_term () t =
-  match t with
-  | Var (x, _) ->
-    Printf.sprintf "%s" x
-  | Cst (c, _) ->
-    Printf.sprintf "%s" c
-  | Lam ((x, _), t) ->
-    Printf.sprintf "\\lambda %s. %a" x sprint_term t
-  | App (t, u) ->
-    Printf.sprintf "(%a %a)" sprint_term t sprint_term u
+let betar p s =
+	match p with
+	Lam (v,b) -> subst [(v,s)] b
+	| _ -> failwith "Only applications of abstractions can be reduced"
+

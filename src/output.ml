@@ -1,10 +1,14 @@
 
-(* Get the file extension corresponding to an output language *)
+(** Get the file extension corresponding to an output language *)
 let extension = function
   | Options.Dk -> ".dk"
   | Options.Coq -> ".v"
   | Options.Twelf -> ".elf"
   | Options.No -> assert false
+
+(** Replace - characters with _ for filenames *)
+
+let low_dash s = String.map (fun x -> if x = '-' then '_' else x) s
 
 (** Printf-like function for printing information. *)
 let print_verbose fmt =
@@ -60,3 +64,17 @@ let print_definition ?(opaque=false) ?(untyped=false) x a b =
      else
        Printf.fprintf chan "\n%%abbrev\n%s : %a =\n  %a.\n" x Dedukti.print_term a Dedukti.print_term b
 
+(** Print the definition [x := b]. *)
+let print_dependancy x b =
+  let chan = !Options.output_channel in
+  match !Options.language with
+  | Options.No -> ()
+  | Options.Dk ->
+     Printf.fprintf chan "\n";
+     Printf.fprintf chan "def %s" x;
+     Printf.fprintf chan " :=\n  %a.\n" Dedukti.print_term b;
+  | Options.Coq ->
+     Printf.fprintf chan "\nDefinition %s" x;
+     Printf.fprintf chan " :=\n  %a.\n" Dedukti.print_term b;
+  | Options.Twelf ->
+     Printf.fprintf chan "\n%%abbrev\n%s =\n  %a.\n" x Dedukti.print_term b

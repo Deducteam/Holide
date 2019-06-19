@@ -11,7 +11,7 @@ let set_input filename =
 
 (** Get the name of the module from the name of the file. *)
 let get_module_name () =
-  Filename.chop_extension (Filename.basename !input_file)
+  Output.low_dash (Filename.chop_extension (Filename.basename !input_file))
 
 (** Read one line from the input. *)
 let read_line () = input_line !input_channel

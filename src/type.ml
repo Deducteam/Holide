@@ -11,14 +11,39 @@ type hol_type =
   | Var of var
   | App of op * hol_type list
 
+let dummy_type = Var "dummy"
+
 (** Arities of the declared type operators *)
-let ops = ref [
+
+let base_ops = [
     "bool", 0;
     "ind", 0;
     "->", 2;
   ]
 
+let ops = ref base_ops
+
+let reset_ops = ops := base_ops
+
 let is_declared op = List.mem_assoc op !ops
+
+(** Keep track of constants' definition *)
+
+let defined_typeops = Hashtbl.create 100
+
+let deps = Hashtbl.create 4000
+
+let add_typeop (tyop:string) (arity:int) = Hashtbl.add defined_typeops tyop (arity,Name.escape (Input.get_module_name()))
+
+let add_dep_op  (op:string) =
+	try
+		let prov_op = snd (Hashtbl.find defined_typeops op) in
+		let mod_name = Name.escape (Input.get_module_name()) in
+		let deps_mod_name = Hashtbl.find_all deps mod_name in
+		if not (List.mem prov_op deps_mod_name) then
+			Hashtbl.add deps mod_name prov_op
+		else ()
+	with Not_found -> ()
 
 (** Compute the free type variables in [a] using [fv] as an accumulator. *)
 let rec free_vars fv a =
@@ -75,18 +100,62 @@ let rec translate_type a =
       let args' = List.map translate_type args in
       Dedukti.apps op' args'
 
+(** Translate a HOL type as a Dedukti term with a substitution. *)
+let rec translate_type_ws theta a  =
+  try
+    let id = TypeSharing.find a in
+    let fv = free_vars [] a in
+    let id' = Dedukti.var (translate_type_id id) in
+    let fv' = List.map Dedukti.var (List.map (fun x -> if List.mem x theta then "hol.bool" else translate_var x) fv) in
+    Dedukti.apps id' fv'
+  with Not_found ->
+    match a with
+    | Var(x) ->
+	  if List.mem x theta then Dedukti.var "hol.bool" else
+      Dedukti.var (translate_var x)
+    | App(op, args) ->
+      let op' = Dedukti.var (translate_op op) in
+      let args' = List.map (translate_type_ws theta) args  in
+      Dedukti.apps op' args'
+
 (** Translate the list of type variables [x1; ...; xn]
     into the Dedukti terms [x1 : type; ...; xn : type] *)
 let translate_vars vars =
   List.map (fun x -> (translate_var x, translate_kind 0)) vars
 
 (** Declare the Dedukti term [op : |arity|]. *)
-let declare_op op arity =
-  Output.print_verbose "Declaring type operator %s\n%!" op;
+let import_op op =
+  let () = add_dep_op op in
+  let op_arity,op_module = Hashtbl.find defined_typeops op in
+  Output.print_verbose "Importing type operator %s\n%!" op;
   if !Options.language <> Options.No then (
+	let op_name = String.concat "." [op_module;Name.escape op] in
+	let op' = translate_op op in
+	let op_def = Dedukti.Var op_name in
+	Output.print_comment (Printf.sprintf "Type operator %s" op);
+	Output.print_dependancy op' op_def);
+  ops := (op, op_arity) :: !ops
+
+(** Declare the Dedukti term [op : |arity|]. *)
+let declare_op op arity =
+  Output.print_verbose "Warning: using undeclared type operator %s\n%!" op;
+  if (Hashtbl.mem defined_typeops op) then import_op op
+  else
+  (Output.print_verbose "Declaring type operator %s\n%!" op;
+  if !Options.language <> Options.No then
     let op' = translate_op op in
     let arity' = translate_kind arity in
     Output.print_declaration op' arity');
+  ops := (op, arity) :: !ops
+
+(** Define the Dedukti term [op : |arity|]. 
+	Same as a declaration, but no import possible. *)
+let define_op op arity =
+  Output.print_verbose "Defining type operator %s\n%!" op;
+  if !Options.language <> Options.No then
+    let op' = translate_op op in
+    let arity' = translate_kind arity in
+    Output.print_declaration op' arity';
   ops := (op, arity) :: !ops
 
 (** Define the Dedukti term [id := |a|]. *)
@@ -108,7 +177,6 @@ let var x = Var(x)
 let app op args =
   (* Check first if the type operator is declared. *)
   if not (is_declared op) then (
-    Output.print_verbose "Warning: using undeclared type operator %s\n%!" op;
     declare_op op (List.length args));
   (App(op, args))
 

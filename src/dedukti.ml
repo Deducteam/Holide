@@ -69,8 +69,7 @@ and print_atomic out term =
      | Options.No -> ()
      | Options.Dk | Options.Coq -> Printf.fprintf out "Type"
      | Options.Twelf ->  Printf.fprintf out "type")
-  | Var(x) ->
-    Printf.fprintf out "%s" x
+  | Var(x) -> Printf.fprintf out "%s" x
   | _ ->
     Printf.fprintf out "(%a)" print_term term
 

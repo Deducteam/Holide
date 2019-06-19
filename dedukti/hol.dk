@@ -1,30 +1,233 @@
 #NAME hol.
 
-(;-----------;)
-(; HOL Types ;)
-(;-----------;)
+(; --------------------------------- ;)
+(; Defining the type of propositions ;)
+(; --------------------------------- ;)
+
+o : Type.
+def eps : o -> Type.
+
+(; -------------------------- ;)
+(; Defining the type of terms ;)
+(; -------------------------- ;)
 
 type : Type.
+arr : type -> type -> type.
 
 bool : type.
-ind  : type.
-arr  : type -> type -> type.
-
-(;-----------;)
-(; HOL Terms ;)
-(;-----------;)
+ind : type.
 
 def term : type -> Type.
 [a,b] term (arr a b) --> term a -> term b.
+[] term bool --> o.
+
+(; --------- ;)
+(; HOL terms ;)
+(; --------- ;)
 
 eq : a : type -> term (arr a (arr a bool)).
 select : a : type -> term (arr (arr a bool) a).
+witness : a : type -> term a.
+cond : a : type -> term (arr bool (arr a (arr a a))).
+
+(; ------------------------------------- ;)
+(; Defining the constructive connectives ;)
+(; ------------------------------------- ;)
+
+imp : o -> o -> o.
+[x,y] eps (imp x y) --> (eps x) -> (eps y).
+
+and : o -> o -> o .
+[x , y ] eps ( and x y ) --> z : o -> ( eps x -> eps y -> eps z ) -> eps z .
+
+true : o .
+[ ] eps true --> z : o -> ( eps z ) -> ( eps z ).
+
+false : o .
+[ ] eps false --> z : o -> ( eps z ).
+
+def not : o -> o := x : o => imp x false .
+
+or : o -> o -> o .
+[x , y ] eps ( or x y )
+--> z : o -> ( eps x -> eps z ) -> ( eps y -> eps z ) -> eps z .
+
+forall : (s : type) -> ( (term s) -> o ) -> o .
+[ s,y ] eps ( forall s y ) --> x : term s -> eps ( y x ).
+
+exists : (s : type) -> ( (term s) -> o ) -> o .
+[ s,y ] eps ( exists s y ) --> z : o -> ( x : term s -> eps ( y x ) -> ( eps z )) -> eps z .
+
+(; ----------------------------- ;)
+(; Properties of the connectives ;)
+(; ----------------------------- ;)
+
+def axiom : (z : o) -> (eps z) -> (eps z) := z => s => s.
+
+def true_i : eps (true) := z : o => s : eps (z) => s.
+
+def and_i : (a : o) -> (b : o) -> (eps a) -> (eps b) -> eps (and a b) :=
+a => b => ea => eb => (z => f => (f ea) eb).
+
+def or_il : (a : o) -> (b : o) -> (eps a) -> eps (or a b) :=
+a => b => ea => (z => f1 => f2 => f1 ea).
+
+def or_ir : (a : o) -> (b : o) -> (eps b) -> eps (or a b) :=
+a => b => eb => (z => f1 => f2 => f2 eb).
+
+def imp_i : (a : o) -> (b : o) -> (eps a -> eps b) -> eps (imp a b) :=
+a => b => eab => eab.
+
+def not_i : (a : o) -> (eps a -> eps false) -> eps (not a) :=
+a => eafalse => imp_i a false eafalse.
+
+def exists_i : (s : type) -> (t : term s) -> (y : (term s -> o)) -> (eps (y t)) -> eps (exists s y) :=
+s => t => y => eyt => (z => f => f t eyt).
+
+def forall_i : (s : type) -> (y : (term s -> o)) -> (t : term s -> eps (y t)) -> eps (forall s y) :=
+s => y => teyt => (x => teyt x).
+
+def false_e : (a : o) -> (eps false) -> eps a :=
+a => efalse => efalse a.
+
+def and_el : (a : o) -> (b : o) -> eps (and a b) -> eps a :=
+a => b => eab => eab a (ea => eb => ea).
+
+def and_er : (a : o) -> (b : o) -> eps (and a b) -> eps b :=
+a => b => eab => eab b (ea => eb => eb).
+
+def imp_e : (a : o) -> (b : o) -> eps (imp a b) -> eps a -> eps b :=
+a => b => eiab => ea => eiab ea.
+
+def not_e : (a : o) -> (b : o) -> eps a -> eps (not a) -> eps b :=
+a => b => ea => ena => false_e b (imp_e a false ena ea).
+
+def or_e : (a : o) -> (b : o) -> (c : o) ->
+eps (or a b) -> (eps a -> eps c) -> (eps b -> eps c) -> eps c :=
+a => b => c => eoab => eac => ebc => eoab c eac ebc.
+
+def fa_e : (s : type) -> (t : term s) -> (y : (term s -> o)) -> eps (forall s y) -> eps (y t) :=
+s => t => y => efay => efay t.
+
+def ex_e : (s : type) -> (a : o) -> (y : (term s -> o)) -> eps (exists s y) ->
+((t : term s) -> eps (y t) -> eps a) -> eps a :=
+s => a => y => eexy => f => eexy a f.
+
+(; ---------------------- ;)
+(; Defining the embedding ;)
+(; ---------------------- ;)
+
+(; Defining the classical connectives ;)
+
+def db_not : o -> o.
+[x] db_not x --> not (not x).
+
+def true_c : o := db_not true.
+
+def false_c : o := db_not false.
+
+def not_c : o -> o.
+[x] not_c x -->  db_not (not (db_not x)).
+
+def imp_c : o -> o -> o.
+[a,b] imp_c a b --> db_not (imp (db_not a) (db_not b)).
+
+def and_c : o -> o -> o.
+[a,b] and_c a b --> db_not (and (db_not a) (db_not b)).
+
+def or_c : o -> o -> o.
+[a,b] or_c a b --> db_not (or (db_not a) (db_not b)).
+
+def forall_c : (s : type) -> (term s -> o) -> o := s => y => db_not (forall s (t => db_not (y t))).
+
+def exists_c : (s : type) -> (term s -> o) -> o := s => y => db_not (exists s (t => db_not (y t))).
+
+(; Excluded middle ;)
+
+def F2 := x : o => or (db_not x) (db_not (not_c x)).
+def F1 := x : o => not (F2 x).
+def F3 := x : o => not (F1 x).
+#ASSERT F3 == x : o => or_c x (not_c x).
+
+def Ax0 := x : o => ef : eps (F1 x) => enx : eps (not x) =>
+		en6x : eps (db_not (db_not (db_not x))) =>
+		en4x : eps (db_not (db_not x)) =>
+		en2x : eps (db_not x) =>
+		en2x.
+
+def Ax1 := x : o => ef : eps (F1 x) => enx : eps (not x) =>
+		en6x : eps (db_not (db_not (db_not x))) =>
+		en4x : eps (db_not (db_not x)) =>
+		en2x : eps (db_not x) =>
+		enx.
+
+def N0 := x : o => ef : eps (F1 x) => enx : eps (not x) =>
+		en6x : eps (db_not (db_not (db_not x))) =>
+		en4x : eps (db_not (db_not x)) =>
+		en2x : eps (db_not x) =>
+		not_e (not x) false	(Ax1 x ef enx en6x en4x en2x)
+								(Ax0 x ef enx en6x en4x en2x).
+
+def N1 := x : o => ef : eps (F1 x) => enx : eps (not x) =>
+		en6x : eps (db_not (db_not (db_not x))) =>
+		en4x : eps (db_not (db_not x)) =>
+		not_i (db_not x) (N0 x ef enx en6x en4x).
+
+def Ax2 := x : o => ef : eps (F1 x) => enx : eps (not x) =>
+		en6x : eps (db_not (db_not (db_not x))) =>
+		en4x : eps (db_not (db_not x)) =>
+		en4x.
+
+def N2 := x : o => ef : eps (F1 x) => enx : eps (not x) =>
+		en6x : eps (db_not (db_not (db_not x))) =>
+		en4x : eps (db_not (db_not x)) =>
+		not_e (not (db_not x)) false	(N1 x ef enx en6x en4x)
+										(Ax2 x ef enx en6x en4x).
+
+def N3 := x : o => ef : eps (F1 x) => enx : eps (not x) =>
+		en6x : eps (db_not (db_not (db_not x))) =>
+		not_i (db_not (db_not x)) (N2 x ef enx en6x).
+
+def Ax3 := x : o => ef : eps (F1 x) => enx : eps (not x) =>
+		en6x : eps (db_not (db_not (db_not x))) =>
+		en6x.
+
+def N4 :=  x : o => ef : eps (F1 x) => enx : eps (not x) =>
+		en6x : eps (db_not (db_not (db_not x))) =>
+		not_e (not (db_not (db_not x))) false	(N3 x ef enx en6x)
+												(Ax3 x ef enx en6x).
+
+def N5 := x : o => ef : eps (F1 x) => enx : eps (not x) =>
+		not_i (db_not (db_not (db_not x))) (N4 x ef enx).
+
+def N6 := x : o => ef : eps (F1 x) => enx : eps (not x) =>
+		or_ir (db_not x) (db_not (db_not (db_not (not x))))
+					(N5 x ef enx).
+
+def Ax4 :=  x : o => ef : eps (F1 x) => enx : eps (not x) => ef.
+
+def N7 := x : o => ef : eps (F1 x) => enx : eps (not x) =>
+		not_e (F2 x) false (N6 x ef enx) (Ax4 x ef enx).
+
+def N8 := x : o => ef : eps (F1 x) => not_i (not x) (N7 x ef).
+
+def N9 := x : o => ef : eps (F1 x) =>
+		or_il (db_not x) (db_not (db_not (db_not (not x)))) (N8 x ef).
+
+def Ax5 := x : o => ef : eps (F1 x) => ef.
+
+def N10 := x : o => ef : eps (F1 x) =>
+		not_e (F2 x) false (N9 x ef) (Ax5 x ef).
+
+def N11 := x : o => not_i (F1 x) (N10 x).
+
+#ASSERT N11 : x:o -> eps (F3 x).
 
 (;------------;)
 (; HOL Proofs ;)
 (;------------;)
 
-proof : term bool -> Type.
+def proof := eps.
 
 REFL : a : type -> t : term a ->
   proof (eq a t t).
@@ -89,218 +292,3 @@ def TRANS (a : type) (t : term a) (u : term a) (v : term a) (H1 : proof (eq a t 
     H2.
 
 def PROVE_HYP (x : term bool) (y : term bool) (H1 : proof x) (H2 : proof x -> proof y) : proof y := H2 H1.
-
-
-(;---------------------;)
-(; Derived Connectives ;)
-(;---------------------;)
-
-def true : term bool :=
-  eq (arr bool bool) (p : term bool => p) (p : term bool => p).
-
-def forall : a : type -> p : term (arr a bool) -> term bool :=
-  a : type => p : term (arr a bool) =>
-  eq (arr a bool) p (x : term a => true).
-
-def false : term bool :=
-  forall bool (p : term bool => p).
-
-def and : term (arr bool (arr bool bool)) :=
-  p : term bool => q : term bool =>
-  eq (arr (arr bool (arr bool bool)) bool)
-    (f : term (arr bool (arr bool bool)) => f p q)
-    (f : term (arr bool (arr bool bool)) => f true true).
-
-def imp : term (arr bool (arr bool bool)) :=
-  p : term bool => q : term bool =>
-  eq bool (and p q) p.
-
-def or : term (arr bool (arr bool bool)) :=
-  p : term bool => q : term bool =>
-  forall bool (r : term bool => imp (imp p r) (imp (imp q r) r)).
-
-def cond : a : type -> term (arr bool (arr a (arr a a))) :=
-  a : type => t : term bool => t1 : term a => t2 : term a =>
-  select a (x : term a =>
-    and
-      (imp (eq bool t true) (eq a x t1))
-      (imp (eq bool t false) (eq a x t2))).
-
-def not (p : term bool) :=
-  imp p false.
-
-witness : a : type -> term a.
-(; :=  a : type => select a (x : term a => true). ;)
-
-def true_intro : proof true :=
-  REFL (arr bool bool) (p : term bool => p).
-
-def eq_sym (a : type) (x : term a) (y : term a) (h : proof (eq a x y)) : proof (eq a y x) :=
-  EQ_MP (eq a x x) (eq a y x)
-    (APP_THM a bool (eq a x) (eq a y) x x
-      (APP_THM a (arr a bool) (eq a) (eq a) x y
-        (REFL (arr a (arr a bool)) (eq a))
-        (h))
-      (REFL a x))
-    (REFL a x).
-
-def eq_true_intro (p : term bool) (h : proof p) : proof (eq bool p true) :=
-  PROP_EXT p true (h2 : proof true => h) (h : proof p => true_intro).
-
-def eq_true_elim (p : term bool) (h : proof (eq bool p true)) : proof p :=
-  EQ_MP true p (eq_sym bool p true h) true_intro.
-
-def forall_intro (a : type) (p : term (arr a bool))
-                 (h : (x : term a -> proof (p x))) : proof (forall a p) :=
-  ABS_THM a bool p (x : term a => true) (x : term a =>
-                                         eq_true_intro (p x) (h x)).
-
-def forall_elim (a : type) (p : term (arr a bool))
-                (h : proof (forall a p)) (x : term a) : proof (p x) :=
-  eq_true_elim (p x)
-               (APP_THM a bool p (x : term a => true) x x h (REFL a x)).
-
-def false_elim (p : term bool) (h : proof false) : proof p :=
-  forall_elim bool (p : term bool => p) h p.
-
-def and_intro (p : term bool)
-              (q : term bool)
-              (Hp : proof p)
-              (Hq : proof q)
-              : proof (and p q)
-:=
-  ABS_THM
-    (arr bool (arr bool bool))
-    bool
-      (f : term (arr bool (arr bool bool)) => f p q)
-      (f : term (arr bool (arr bool bool)) => f true true)
-      (f : term (arr bool (arr bool bool)) =>
-       APP_THM
-         bool
-         bool
-         (f p)
-         (f true)
-         q
-           true
-           (APP_THM
-             bool
-             (arr bool bool)
-             f
-               f
-               p
-               true
-               (REFL (arr bool (arr bool bool)) f)
-               (eq_true_intro p Hp))
-           (eq_true_intro q Hq)).
-
-def and_elim1 (p : term bool)
-              (q : term bool)
-              (Hpq : proof (and p q))
-              : proof p
-:=
-  eq_true_elim p
-    (APP_THM
-      (arr bool (arr bool bool))
-      bool
-        (f : (term bool -> term bool -> term bool) => f p q)
-        (f : (term bool -> term bool -> term bool) => f true true)
-        (x : term bool => y : term bool => x)
-        (x : term bool => y : term bool => x)
-        Hpq
-          (REFL (arr bool (arr bool bool)) (x : term bool => y : term bool => x))).
-
-
-def and_elim2 (p : term bool)
-              (q : term bool)
-              (Hpq : proof (and p q))
-              : proof q
-:=
-  eq_true_elim q
-    (APP_THM
-      (arr bool (arr bool bool))
-      bool
-        (f : (term bool -> term bool -> term bool) => f p q)
-        (f : (term bool -> term bool -> term bool) => f true true)
-        (x : term bool => y : term bool => y)
-        (x : term bool => y : term bool => y)
-        Hpq
-          (REFL (arr bool (arr bool bool)) (x : term bool => y : term bool => y))).
-
-def imp_intro (p : term bool)
-              (q : term bool)
-              (Hpq : proof p -> proof q)
-              : proof (imp p q)
-:=
-  PROP_EXT (and p q) p
-             (Hp : proof p =>
-              and_intro p q Hp (Hpq Hp))
-             (and_elim1 p q).
-
-
-def imp_elim (p : term bool)
-             (q : term bool)
-             (Hpq : proof (imp p q))
-             (Hp : proof p)
-             : proof q
-:=
-  and_elim2 p q (EQ_MP p (and p q) (eq_sym bool (and p q) p Hpq) Hp).
-
-def or_intro1 (p : term bool)
-              (q : term bool)
-              (Hp : proof p)
-              : proof (or p q)
-:=
-  forall_intro
-    bool
-    (r : term bool => imp (imp p r) (imp (imp q r) r))
-    (r : term bool =>
-     imp_intro
-       (imp p r)
-       (imp (imp q r) r)
-       (H : proof (imp p r) =>
-        imp_intro
-          (imp q r)
-          r
-            (__ : proof (imp q r) =>
-            imp_elim p r H Hp))).
-
-
-def or_intro2 (p : term bool)
-              (q : term bool)
-              (Hq : proof q)
-              : proof (or p q)
-:=
-  forall_intro
-    bool
-    (r : term bool => imp (imp p r) (imp (imp q r) r))
-    (r : term bool =>
-     imp_intro
-       (imp p r)
-       (imp (imp q r) r)
-       (__ : proof (imp p r) =>
-       imp_intro
-         (imp q r)
-         r
-           (H : proof (imp q r) =>
-            imp_elim q r H Hq))).
-
-def or_elim (p : term bool)
-            (q : term bool)
-            (r : term bool)
-            (Hpq : proof (or p q))
-            (Hpr : proof p -> proof r)
-            (Hqr : proof q -> proof r) : proof r
-:=
-  imp_elim
-    (imp q r)
-    r
-      (imp_elim
-        (imp p r)
-        (imp (imp q r) r)
-        (forall_elim
-          bool
-          (r : term bool => imp (imp p r) (imp (imp q r) r))
-          Hpq
-            r)
-        (imp_intro p r Hpr))
-      (imp_intro q r Hqr).

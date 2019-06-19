@@ -26,6 +26,10 @@ sig
 
   (** Return the [id] associated with [node]. *)
   val find : H.t -> id
+  
+  val clear : H.t -> unit
+  
+  val size : H.t -> int
 
 end =
 struct
@@ -36,10 +40,20 @@ struct
 
   let add node =
     if not (Hashtbl.mem table node)
-    then Hashtbl.add table node (Hashtbl.length table);
+    then
+    begin
+    Hashtbl.add table node (Hashtbl.length table);
+    end;
     Hashtbl.find table node
 
-  let find node = Hashtbl.find table node
+  let find node = 
+    Hashtbl.find table node
+  
+  let clear node = 
+    Hashtbl.reset table
+  
+  let size node = 
+    Hashtbl.length table
 
 end
 

@@ -10,7 +10,7 @@ include .config_vars
 # Configuration #
 #################
 
-OPTIONS     = -classic-display
+OPTIONS     = -classic-display -use-ocamlfind
 LIBS        = str
 
 # Do not include slash at the end because ocamlbuild does not support it
