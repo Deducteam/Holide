@@ -13,6 +13,19 @@ type hol_type =
 
 let dummy_type = Var "dummy"
 
+(** Printing types *)
+
+let rec sprint_type () t =
+  match t with
+  | Var x ->
+    Printf.sprintf "%s" x
+  | App (top, l) ->
+    Printf.sprintf "(%s %s)" top (sprint_list_type l)
+  and sprint_list_type_rec = function
+	 [] 		-> ""
+	| t::ltq	-> String.concat "" [(sprint_type () t);"\n";(sprint_list_type_rec ltq)]
+  and sprint_list_type lt = String.concat "" ["[";sprint_list_type_rec lt;"]"]
+
 (** Arities of the declared type operators *)
 
 let base_ops = [
