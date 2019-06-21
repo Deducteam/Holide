@@ -16,3 +16,5 @@ let get_module_name () =
 (** Read one line from the input. *)
 let read_line () = input_line !input_channel
 
+(** Close input file *)
+let close () = close_in !input_channel
