@@ -65,10 +65,10 @@ let process_command cmd stack =
 (*      let () = Output.print_verbose "Processing %s\n%!" cmd in*)
       match cmd, stack with
       | "absTerm", Term(t) :: Var(x) :: stack -> Term(Term.lam x t) :: stack
-      | "absThm", Thm(thm_tu) :: Var(x) :: stack -> Thm(Thm.abs_thm x thm_tu) :: stack
+      | "absThm", Thm(thm_tu) :: Var(x) :: stack -> Thm(Thm.define_thm "dictAbs" ~untyped:true (Thm.abs_thm x thm_tu)) :: stack
       | "appTerm", Term(u) :: Term(t) :: stack -> Term(Term.app t u) :: stack
-      | "appThm", Thm(thm_tu) :: Thm(thm_fg) :: stack -> Thm(Thm.app_thm thm_fg thm_tu) :: stack
-      | "assume", Term(p) :: stack -> Thm(Thm.assume p) :: stack
+      | "appThm", Thm(thm_tu) :: Thm(thm_fg) :: stack -> Thm(Thm.define_thm "dictApp" ~untyped:true (Thm.app_thm thm_fg thm_tu)) :: stack
+      | "assume", Term(p) :: stack -> Thm(Thm.define_thm "dictAssume" ~untyped:true (Thm.assume p)) :: stack
       | "axiom", Term(p) :: List(gamma) :: stack ->
         let extract_term obj =
           match obj with
@@ -84,11 +84,11 @@ let process_command cmd stack =
         let gamma = List.map extract_term gamma in
         let () = Thm.add_dep_ax name in
         Thm(Thm.named_axiom gamma p name) :: stack
-      | "betaConv", Term(Term.App(Term.Lam(x, t), u)) :: stack -> Thm(Thm.beta_conv x t u) :: stack
+      | "betaConv", Term(Term.App(Term.Lam(x, t), u)) :: stack -> Thm(Thm.define_thm "dictBeta" ~untyped:true (Thm.beta_conv x t u)) :: stack
       | "cons", List(tail) :: head :: stack -> List(head :: tail) :: stack
       | "const", Name(name) :: stack -> Const(name) :: stack
       | "constTerm", Type(a) :: Const(c) :: stack -> Term(Term.cst c a) :: stack
-      | "deductAntisym", Thm(thm_q) :: Thm(thm_p) :: stack -> Thm(Thm.deduct_anti_sym thm_p thm_q) :: stack
+      | "deductAntisym", Thm(thm_q) :: Thm(thm_p) :: stack -> Thm(Thm.define_thm "dictDAS" ~untyped:true (Thm.deduct_anti_sym thm_p thm_q)) :: stack
       | "def", Num(k) :: obj :: stack ->
         dict_add k obj;
         obj :: stack
@@ -104,7 +104,7 @@ let process_command cmd stack =
         let abs_rep, rep_abs = Thm.define_type_op op abs rep tvars pt in
         Type.add_typeop op (List.length tvars);
         Thm(rep_abs) :: Thm(abs_rep) :: Const(rep) :: Const(abs) :: TypeOp(op) :: stack
-      | "eqMp", Thm(thm_p) :: Thm(thm_pq) :: stack -> Thm(Thm.eq_mp thm_pq thm_p) :: stack
+      | "eqMp", Thm(thm_p) :: Thm(thm_pq) :: stack -> Thm(Thm.define_thm "dictEqMp" ~untyped:true (Thm.eq_mp thm_pq thm_p)) :: stack
       | "nil", stack -> List([]) :: stack
       | "opType", List(args) :: TypeOp(type_op) :: stack ->
         let extract_type obj =
@@ -115,7 +115,7 @@ let process_command cmd stack =
         Type(Type.app type_op args) :: stack
       | "pop", _ :: stack -> stack
       | "ref", Num(k) :: stack -> dict_find k :: stack
-      | "refl", Term(t) :: stack -> Thm(Thm.refl t) :: stack
+      | "refl", Term(t) :: stack -> Thm(Thm.define_thm "dictRefl" ~untyped:true (Thm.refl t)) :: stack
       | "remove", Num(k) :: stack ->
         let obj = dict_find k in
         Hashtbl.remove dict k;
@@ -131,7 +131,7 @@ let process_command cmd stack =
           | _ -> failwith "not a term substitution" in
         let theta = List.map extract_type_subst theta in
         let sigma = List.map extract_term_subst sigma in
-        Thm(Thm.subst theta sigma thm) :: stack
+        Thm(Thm.define_thm "dictSubst" ~untyped:true (Thm.subst theta sigma thm)) :: stack
       | "thm", Term(p) :: List(qs) :: Thm(thm) :: stack ->
         let extract_term obj =
           match obj with
@@ -213,6 +213,7 @@ let process_file () =
     process_commands stack in
   try process_commands []
   with End_of_file ->
+    let () = Input.close () in
 	let () = Term.csts := Term.base_csts in
 	let () = Type.ops := Type.base_ops in
 	let () = Term.interpretation := Term.base_interpretation in
@@ -241,6 +242,7 @@ let process_names_file () =
     process_commands stack in
   try process_commands []
   with End_of_file ->
+    let () = Input.close () in
 	let () = Term.csts := Term.base_csts in
 	let () = Type.ops := Type.base_ops in
 	let () = Term.interpretation := Term.base_interpretation in
