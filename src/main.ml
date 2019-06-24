@@ -55,20 +55,3 @@ let () =
   let () = Printf.printf "\n\nTopological order (%n):\n" (Database.number_dep()) in
   let () = Database.ordereddep (fun file -> Printf.printf " %s.dk " file) Database.dep in
   Printf.printf "\n"
-  
-  
-  (*Printf.printf "Constant declared (with repetition) :\n%s\n" (String.concat ";\n" (List.map (fun (x,y) -> String.concat "," [x;y]) !Term.declared));
-  Printf.printf "Constant in some type_op definition :\n%s\n" (String.concat ";\n" !Term.in_type_op);
-  Printf.printf "\n\n\nImported theorems : %n\n" (Hashtbl.length Thm.outputs);
-  Printf.printf "\n\n\nTotal number of dependencies : %n\n" (Hashtbl.length Thm.inputs);
-  Printf.printf "Example : theorem LT_SUC defined in module %s\n" (Hashtbl.find Thm.outputs "LT_SUC");
-  Hashtbl.iter (fun c -> fun tam -> Printf.printf "Example : constant %s defined in module %s\n" c (snd tam)) Term.defined_csts;
-  let l = Hashtbl.find_all Thm.inputs "list__nth" in
-  let f = fun x -> String.concat " " [x; "from" ; Hashtbl.find Thm.outputs x] in
-  Printf.printf "Example : dependencies in module list-nth :\n %s\n" (String.concat ";\n" (List.map f l))
-  if !Input.input_file = ""
-  then fail ();
-  if !Options.output_file = "" && !Options.language <> Options.No
-  then Options.set_output (Name.escape (Output.low_dash (Filename.chop_extension !Input.input_file)) ^ Output.extension !Options.language);
-  Article.process_file ()*)
-

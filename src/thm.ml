@@ -126,6 +126,10 @@ let translate_prop term_context p =
 let translate_prop_ws term_context p theta =
   Dedukti.app (Dedukti.var (Name.hol "proof")) (Term.translate_term_ws term_context p theta)
 
+(** Translate a HOL proposition as a Dedukti type, without using the sharing. *)
+let translate_prop_total term_context p =
+  Dedukti.app (Dedukti.var (Name.hol "proof")) (Term.translate_term_total term_context p)
+
 (** Translate the list of hypotheses [p1; ...; pn]
     into the Dedukti terms [x1 : ||p1||; ...; xn : ||pn||] and add them to
     the context *)
@@ -210,8 +214,8 @@ let rec translate_thm term_context context ((gamma, p, proof) as thm) theta =
     | EqMp(((_, pq, _) as thm_pq), ((_, p, _) as thm_p)) ->
       let _, q = Term.get_eq pq in
       let eq_mp' = Dedukti.var (Name.hol "EQ_MP") in
-      let p' = Term.translate_term term_context p in
-      let q' = Term.translate_term term_context q in
+      let p' = Term.translate_term_ws term_context p theta in
+      let q' = Term.translate_term_ws term_context q theta in
       let thm_p' = translate_thm term_context context thm_p theta in
       let thm_pq' = translate_thm term_context context thm_pq theta in
       Dedukti.apps eq_mp' [p'; q'; thm_pq'; thm_p']
@@ -465,32 +469,18 @@ let declare_namedaxiom comment (gamma, p) (name:string) =
       Output.print_dependancy name p'));
   thm
 
-
 (** Define the theorem [id := thm] *)
 let define_thm comment ?(untyped=false) ((gamma, p, pi) as thm) =
-  if !Options.language <> Options.No && not (ThmSharing.mem (thm,true))
+  (if !Options.language <> Options.No && not (ThmSharing.mem (thm,true))
 	&& not (ThmSharing.mem (thm,false)) then
-	  (match pi with
-	  | ProveHyp (thm1,thm2) | Mp (thm1,thm2) ->
-		  let ftv = free_type_vars thm in
-		  let fv = free_vars thm in
+	let ftv = free_type_vars thm in
+	let fv = free_vars thm in
+	let ftv' = Type.translate_vars ftv in
+	let fv', term_context = Term.translate_vars [] fv in
+	let gamma', context = translate_hyps term_context [] (TermSet.elements gamma) in
+	match pi with
+	  | ProveHyp (thm1,_) | Mp (thm1,_) | EqMp (thm1,_) | Conjunct1 thm1 | Conjunct2 thm1 | Spec (_,thm1) ->
 		  let theta = cwd (free_type_vars thm) (free_type_vars thm1) in
-		  let ftv' = Type.translate_vars ftv in
-		  let fv', term_context = Term.translate_vars [] fv in
-		  let gamma', context = translate_hyps term_context [] (TermSet.elements gamma) in
-		  let p' = Dedukti.pies ftv' (Dedukti.pies fv' (Dedukti.pies gamma' (translate_prop term_context p))) in
-		  let thm' = Dedukti.lams ftv' (Dedukti.lams fv' (Dedukti.lams gamma' (translate_thm term_context context thm theta))) in
-		  let id = ThmSharing.add (thm,false) in
-		  let id' = translate_id id in
-		  Output.print_comment comment;
-		  Output.print_definition ~opaque:true ~untyped:untyped id' p' thm';
-	  | Conjunct1 thm1 | Conjunct2 thm1 | Spec (_,thm1) ->
-		  let ftv = free_type_vars thm in
-		  let fv = free_vars thm in
-		  let theta = cwd (free_type_vars thm) (free_type_vars thm1) in
-		  let ftv' = Type.translate_vars ftv in
-		  let fv', term_context = Term.translate_vars [] fv in
-		  let gamma', context = translate_hyps term_context [] (TermSet.elements gamma) in
 		  let p' = Dedukti.pies ftv' (Dedukti.pies fv' (Dedukti.pies gamma' (translate_prop term_context p))) in
 		  let thm' = Dedukti.lams ftv' (Dedukti.lams fv' (Dedukti.lams gamma' (translate_thm term_context context thm theta))) in
 		  let id = ThmSharing.add (thm,false) in
@@ -498,11 +488,6 @@ let define_thm comment ?(untyped=false) ((gamma, p, pi) as thm) =
 		  Output.print_comment comment;
 		  Output.print_definition ~opaque:true ~untyped:untyped id' p' thm';
 	  | _ ->
-		  let ftv = free_type_vars thm in
-		  let fv = free_vars thm in
-		  let ftv' = Type.translate_vars ftv in
-		  let fv', term_context = Term.translate_vars [] fv in
-		  let gamma', context = translate_hyps term_context [] (TermSet.elements gamma) in
 		  let p' = Dedukti.pies ftv' (Dedukti.pies fv' (Dedukti.pies gamma' (translate_prop term_context p))) in
 		  let thm' = Dedukti.lams ftv' (Dedukti.lams fv' (Dedukti.lams gamma' (translate_thm term_context context thm []))) in
 		  let id = ThmSharing.add (thm,false) in
@@ -518,7 +503,7 @@ let define_namedthm comment ?(untyped=false) ((gamma, p, _) as thm) (name:string
       let ftv' = Type.translate_vars ftv in
       let fv', term_context = Term.translate_vars [] fv in
       let gamma', context = translate_hyps term_context [] (TermSet.elements gamma) in
-      let p' = Dedukti.pies ftv' (Dedukti.pies fv' (Dedukti.pies gamma' (translate_prop term_context p))) in
+      let p' = Dedukti.pies ftv' (Dedukti.pies fv' (Dedukti.pies gamma' (translate_prop_total term_context p))) in
       let thm' = Dedukti.lams ftv' (Dedukti.lams fv' (Dedukti.lams gamma' (translate_thm term_context context thm []))) in
       let id = ThmSharing.add (thm,true) in
       let () = (thm_names := (id,name)::(!thm_names)) in
@@ -565,7 +550,7 @@ let eq_mp ((gamma, pq, _) as thm_pq) ((delta, p, _) as thm_p) =
   if Term.compare p p' <> 0 then
 	begin
 	Printf.printf "%s\n" (Term.sprint_term () p);
-	Printf.printf "%s\n" (Term.sprint_term () q);
+	Printf.printf "%s\n" (Term.sprint_term () p');
 	failwith "eq_mp : terms must be alpha-equivalent";
 	end;
   (TermSet.union gamma delta, q, EqMp(thm_pq, thm_p))
@@ -753,6 +738,7 @@ let define_type_op op abs rep tvars (gamma, pt, _) =
     (declare_axiom "defineTypeOp" (TermSet.empty, eq1),
      declare_axiom "defineTypeOp" (TermSet.empty, eq2)) 
   | _ -> failwith "ill-formed type definition"
+
 
 let rec sprint_thm () (gamma, p, _) =
   (* WARNING: printing of context not yet implemented *)

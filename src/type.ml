@@ -131,6 +131,16 @@ let rec translate_type_ws theta a  =
       let args' = List.map (translate_type_ws theta) args  in
       Dedukti.apps op' args'
 
+(** Translate a HOL type as a Dedukti term, without using the sharing. *)
+let rec translate_type_total a =
+  match a with
+    | Var(x) ->
+      Dedukti.var (translate_var x)
+    | App(op, args) ->
+      let op' = Dedukti.var (translate_op op) in
+      let args' = List.map translate_type_total args in
+      Dedukti.apps op' args'
+
 (** Translate the list of type variables [x1; ...; xn]
     into the Dedukti terms [x1 : type; ...; xn : type] *)
 let translate_vars vars =

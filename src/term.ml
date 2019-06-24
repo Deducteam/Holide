@@ -191,6 +191,10 @@ let translate_type a =
 let translate_type_ws theta a =
   Dedukti.app (Dedukti.var (Name.hol "term")) (Type.translate_type_ws theta a)
 
+(** Translate the HOL type [a] as a Dedukti type. *)
+let translate_type_total a =
+  Dedukti.app (Dedukti.var (Name.hol "term")) (Type.translate_type_total a)
+
 (** Translate the list of term variables [x1, a1; ...; xn, an]
     into the Dedukti terms [x1 : ||a1||; ...; xn : ||an||] and add them to
     the context. *)
@@ -308,6 +312,35 @@ let rec translate_term_ws context t theta =
       mk_app a' b' t' u'
 
 
+(** Translate the HOL term [t] as a Dedukti term, without using the sharing. *)
+let rec translate_term_total context t =
+  match t with
+    | Var(x) ->
+      translate_var_term context x
+    | Cst(c, a) ->
+      let b = List.assoc c !csts in
+      let ftv = Type.free_vars [] b in
+      let theta = Type.match_type [] a b in
+      let c' = Dedukti.var (translate_cst c) in
+      let theta' = List.map (fun x -> Type.translate_type_total (List.assoc x theta)) ftv in
+      Dedukti.apps c' theta'
+    | Lam((x, a), t) ->
+      let b = type_of t in
+      let a' = Type.translate_type_total a in
+      let b' = Type.translate_type_total b in
+      let x' = translate_var ((x, a) :: context) (x, a) in
+      let t' = translate_term_total ((x, a) :: context) t in
+      mk_lam a' (translate_type a) b' x' t'
+    | App(t, u) ->
+      let a, b = Type.get_arr (type_of t) in
+      let a' = Type.translate_type_total a in
+      let b' = Type.translate_type_total b in
+      let t' = translate_term_total context t in
+      let u' = translate_term_total context u in
+      mk_app a' b' t' u'
+
+
+(** Import the constant c. *)
 let import_cst c =
   let () = add_dep_cst c in
   let c_type,c_module = Hashtbl.find defined_csts c in
