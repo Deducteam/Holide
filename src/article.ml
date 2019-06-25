@@ -197,8 +197,9 @@ let process_command cmd stack =
 (** Read and process the article file. *)
 
 let rec require_deps = function
-	  []		-> Output.print_command "REQUIRE" ["hol"]
-	| dep::qdep	-> Output.print_command "REQUIRE" [dep]; require_deps qdep
+	  []		-> Output.print_command "REQUIRE" ["hol"] true
+	| dep::qdep	-> if dep <> ((Name.escape (Output.low_dash (Input.get_module_name ()))))
+		then Output.print_command "REQUIRE" [dep] false; require_deps qdep
 
 let process_file () =
   (* Preamble *)
@@ -209,7 +210,7 @@ let process_file () =
     | Options.Twelf -> ()
     | Options.Dk -> ()
     | Options.Coq ->
-       Output.print_command "Require Import" ["hol"]);
+       Output.print_command "Require Import" ["hol"] true);
   (* Main section *)
   require_deps (Database.dependencies (Name.escape (Output.low_dash (Input.get_module_name ()))));
   let rec process_commands stack =

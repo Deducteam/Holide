@@ -85,17 +85,26 @@ let rec cwd l = function
 
 let outputs = Hashtbl.create 1000
 
-let add_thm (thm:string) = Hashtbl.add outputs thm (Name.escape (Input.get_module_name()))
+let add_thm (thm:string) =
+	Hashtbl.add outputs thm (Name.escape (Input.get_module_name()));
+	try
+		let prov_op = Name.escape (Input.get_module_name()) in
+		let already_used = Hashtbl.find_all Type.unresolved_deps thm in
+		let resolve_dep mod_name = Hashtbl.add Type.deps mod_name prov_op in
+		let () = List.iter resolve_dep already_used in
+		let () = List.iter (fun x -> Hashtbl.remove Type.unresolved_deps thm) already_used in
+		()
+	with Not_found -> ()
 
 let add_dep_ax (ax:string) =
+	let mod_name = Name.escape (Input.get_module_name()) in
 	try
 		let prov_ax = Hashtbl.find outputs ax in
-		let mod_name = Name.escape (Input.get_module_name()) in
 		let deps_mod_name = Hashtbl.find_all Type.deps mod_name in
 		if not (List.mem prov_ax deps_mod_name) then
 			Hashtbl.add Type.deps mod_name prov_ax
 		else ()
-	with Not_found -> ()
+	with Not_found -> Hashtbl.add Type.unresolved_deps ax mod_name
 
 
 (** Translation *)
@@ -712,8 +721,8 @@ let define_type_op op abs rep tvars (gamma, pt, _) =
     let b = Type.app op (List.map Type.var tvars) in
     let () = Term.in_type_op := abs::!Term.in_type_op in
     let () = Term.in_type_op := rep::!Term.in_type_op in
-    Term.declare_cst abs (Type.arr a b);
-    Term.declare_cst rep (Type.arr b a);
+    Term.declare_cst ~intyop:true abs (Type.arr a b);
+    Term.declare_cst ~intyop:true rep (Type.arr b a);
     Term.add_cst abs (Type.arr a b);
     Term.add_cst rep (Type.arr b a);
     let abs = Term.cst abs (Type.arr a b) in

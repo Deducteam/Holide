@@ -21,12 +21,14 @@ let print_comment comment = match !Options.language with
   | Options.Twelf -> Printf.fprintf !Options.output_channel "\n%% %s %%\n" comment
 
 (** Print the command (e.g. ["NAME"], ["IMPORT"]) followed by its arguments. *)
-let print_command command args =
+let print_command command args b =
   Printf.fprintf !Options.output_channel "\n";
-  if !Options.language = Options.Dk then Printf.fprintf !Options.output_channel "#";
+  if !Options.language = Options.Dk then
+  Printf.fprintf !Options.output_channel "#";
   Printf.fprintf !Options.output_channel "%s" command;
   List.iter (Printf.fprintf !Options.output_channel " %s") args;
-  Printf.fprintf !Options.output_channel ".\n"
+  Printf.fprintf !Options.output_channel ".";
+  if b then Printf.fprintf !Options.output_channel "\n"
 
 (** Print the declaration [x : a]. *)
 let print_declaration x a =

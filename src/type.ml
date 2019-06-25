@@ -46,17 +46,28 @@ let defined_typeops = Hashtbl.create 100
 
 let deps = Hashtbl.create 4000
 
-let add_typeop (tyop:string) (arity:int) = Hashtbl.add defined_typeops tyop (arity,Name.escape (Input.get_module_name()))
+let unresolved_deps = Hashtbl.create 1000
+
+let add_typeop (tyop:string) (arity:int) =
+	Hashtbl.add defined_typeops tyop (arity,Name.escape (Input.get_module_name()));
+	try
+		let prov_op = Name.escape (Input.get_module_name()) in
+		let already_used = Hashtbl.find_all unresolved_deps tyop in
+		let resolve_dep mod_name = Hashtbl.add deps mod_name prov_op in
+		let () = List.iter resolve_dep already_used in
+		let () = List.iter (fun x -> Hashtbl.remove unresolved_deps tyop) already_used in
+		()
+	with Not_found -> ()
 
 let add_dep_op  (op:string) =
+	let mod_name = Name.escape (Input.get_module_name()) in
 	try
 		let prov_op = snd (Hashtbl.find defined_typeops op) in
-		let mod_name = Name.escape (Input.get_module_name()) in
 		let deps_mod_name = Hashtbl.find_all deps mod_name in
 		if not (List.mem prov_op deps_mod_name) then
 			Hashtbl.add deps mod_name prov_op
 		else ()
-	with Not_found -> ()
+	with Not_found -> Hashtbl.add unresolved_deps op mod_name
 
 (** Compute the free type variables in [a] using [fv] as an accumulator. *)
 let rec free_vars fv a =
@@ -148,7 +159,6 @@ let translate_vars vars =
 
 (** Declare the Dedukti term [op : |arity|]. *)
 let import_op op =
-  let () = add_dep_op op in
   let op_arity,op_module = Hashtbl.find defined_typeops op in
   Output.print_verbose "Importing type operator %s\n%!" op;
   if !Options.language <> Options.No then (
@@ -162,6 +172,7 @@ let import_op op =
 (** Declare the Dedukti term [op : |arity|]. *)
 let declare_op op arity =
   Output.print_verbose "Warning: using undeclared type operator %s\n%!" op;
+  let () = add_dep_op op in
   if (Hashtbl.mem defined_typeops op) then import_op op
   else
   (Output.print_verbose "Declaring type operator %s\n%!" op;

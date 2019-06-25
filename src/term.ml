@@ -139,17 +139,26 @@ let () =
 
 let defined_csts = Hashtbl.create 100
 
-let add_cst (c:cst) (a:Type.hol_type) = Hashtbl.add defined_csts c (a,Name.escape (Input.get_module_name()))
+let add_cst (c:cst) (a:Type.hol_type) =
+	Hashtbl.add defined_csts c (a,Name.escape (Input.get_module_name()));
+	try
+		let prov_cst = Name.escape (Input.get_module_name()) in
+		let already_used = Hashtbl.find_all Type.unresolved_deps c in
+		let resolve_dep mod_name = Hashtbl.add Type.deps mod_name prov_cst in
+		let () = List.iter resolve_dep already_used in
+		let () = List.iter (fun x -> Hashtbl.remove Type.unresolved_deps c) already_used in
+		()
+	with Not_found -> ()
 
 let add_dep_cst (cst:string) =
+	let mod_name = Name.escape (Input.get_module_name()) in
 	try
 		let prov_cst = snd (Hashtbl.find defined_csts cst) in
-		let mod_name = Name.escape (Input.get_module_name()) in
 		let deps_mod_name = Hashtbl.find_all Type.deps mod_name in
 		if not (List.mem prov_cst deps_mod_name) then
 			Hashtbl.add Type.deps mod_name prov_cst
 		else ()
-	with Not_found -> ()
+	with Not_found -> Hashtbl.add Type.unresolved_deps cst mod_name
 
 (** Sharing of terms *)
 
@@ -342,7 +351,6 @@ let rec translate_term_total context t =
 
 (** Import the constant c. *)
 let import_cst c =
-  let () = add_dep_cst c in
   let c_type,c_module = Hashtbl.find defined_csts c in
   Output.print_verbose "Importing constant %s\n%!" c;
   if !Options.language <> Options.No then (
@@ -354,8 +362,9 @@ let import_cst c =
   csts := (c, c_type) :: !csts
 
 (** Declare the constant [c : a]. *)
-let declare_cst c a =
+let declare_cst ?(intyop=false) c a =
   Output.print_verbose "Warning: using constant %s, undeclared in this module\n%!" c;
+  let () = if (not intyop) then add_dep_cst c in
   if ((Hashtbl.mem defined_csts c) &&
 	(snd (Hashtbl.find defined_csts c) <> Name.escape (Input.get_module_name())))
 	then import_cst c
