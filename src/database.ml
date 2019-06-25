@@ -33,6 +33,11 @@ let fill_dep l =
 	List.iter add_mod l;
 	Hashtbl.iter add_dep (Type.deps)
 
+(* Find dependencies of a given module *)
+
+let dependencies mod_name =
+	Dep.pred dep mod_name
+
 (* Find order *)
 
 let ordereddep f g = OrderedDep.iter f g
