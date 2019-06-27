@@ -24,9 +24,9 @@ let dict = Hashtbl.create 10007
 let dict_add k obj =
   let obj =
     match obj with
-    | Type(a) -> Type(Type.define_type a)
-    | Term(t) -> Term(Term.define_term t)
-    | Thm(thm) -> Thm(Thm.define_thm "dict" ~untyped:true thm)
+    | Type(a) -> Type(Type.define_type ~local:true a)
+    | Term(t) -> Term(Term.define_term ~local:true t)
+    | Thm(thm) -> Thm(Thm.define_thm "dict" ~untyped:true ~local:true thm)
     | _ -> obj in
   Hashtbl.add dict k obj
 
@@ -65,10 +65,10 @@ let process_command cmd stack =
 (*      let () = Output.print_verbose "Processing %s\n%!" cmd in*)
       match cmd, stack with
       | "absTerm", Term(t) :: Var(x) :: stack -> Term(Term.lam x t) :: stack
-      | "absThm", Thm(thm_tu) :: Var(x) :: stack -> Thm(Thm.define_thm "dictAbs" ~untyped:true (Thm.abs_thm x thm_tu)) :: stack
+      | "absThm", Thm(thm_tu) :: Var(x) :: stack -> Thm(Thm.define_thm "dictAbs" ~untyped:true ~local:true (Thm.abs_thm x thm_tu)) :: stack
       | "appTerm", Term(u) :: Term(t) :: stack -> Term(Term.app t u) :: stack
-      | "appThm", Thm(thm_tu) :: Thm(thm_fg) :: stack -> Thm(Thm.define_thm "dictApp" ~untyped:true (Thm.app_thm thm_fg thm_tu)) :: stack
-      | "assume", Term(p) :: stack -> Thm(Thm.define_thm "dictAssume" ~untyped:true (Thm.assume p)) :: stack
+      | "appThm", Thm(thm_tu) :: Thm(thm_fg) :: stack -> Thm(Thm.define_thm "dictApp" ~untyped:true ~local:true (Thm.app_thm thm_fg thm_tu)) :: stack
+      | "assume", Term(p) :: stack -> Thm(Thm.define_thm "dictAssume" ~untyped:true ~local:true (Thm.assume p)) :: stack
       | "axiom", Term(p) :: List(gamma) :: stack ->
         let extract_term obj =
           match obj with
@@ -84,11 +84,11 @@ let process_command cmd stack =
         let gamma = List.map extract_term gamma in
         let () = Thm.add_dep_ax name in
         Thm(Thm.named_axiom gamma p name) :: stack
-      | "betaConv", Term(Term.App(Term.Lam(x, t), u)) :: stack -> Thm(Thm.define_thm "dictBeta" ~untyped:true (Thm.beta_conv x t u)) :: stack
+      | "betaConv", Term(Term.App(Term.Lam(x, t), u)) :: stack -> Thm(Thm.define_thm "dictBeta" ~untyped:true ~local:true (Thm.beta_conv x t u)) :: stack
       | "cons", List(tail) :: head :: stack -> List(head :: tail) :: stack
       | "const", Name(name) :: stack -> Const(name) :: stack
       | "constTerm", Type(a) :: Const(c) :: stack -> Term(Term.cst c a) :: stack
-      | "deductAntisym", Thm(thm_q) :: Thm(thm_p) :: stack -> Thm(Thm.define_thm "dictDAS" ~untyped:true (Thm.deduct_anti_sym thm_p thm_q)) :: stack
+      | "deductAntisym", Thm(thm_q) :: Thm(thm_p) :: stack -> Thm(Thm.define_thm "dictDAS" ~untyped:true ~local:true (Thm.deduct_anti_sym thm_p thm_q)) :: stack
       | "def", Num(k) :: obj :: stack ->
         dict_add k obj;
         obj :: stack
@@ -104,7 +104,7 @@ let process_command cmd stack =
         let abs_rep, rep_abs = Thm.define_type_op op abs rep tvars pt in
         Type.add_typeop op (List.length tvars);
         Thm(rep_abs) :: Thm(abs_rep) :: Const(rep) :: Const(abs) :: TypeOp(op) :: stack
-      | "eqMp", Thm(thm_p) :: Thm(thm_pq) :: stack -> Thm(Thm.define_thm "dictEqMp" ~untyped:true (Thm.eq_mp thm_pq thm_p)) :: stack
+      | "eqMp", Thm(thm_p) :: Thm(thm_pq) :: stack -> Thm(Thm.define_thm "dictEqMp" ~untyped:true ~local:true (Thm.eq_mp thm_pq thm_p)) :: stack
       | "nil", stack -> List([]) :: stack
       | "opType", List(args) :: TypeOp(type_op) :: stack ->
         let extract_type obj =
@@ -115,7 +115,7 @@ let process_command cmd stack =
         Type(Type.app type_op args) :: stack
       | "pop", _ :: stack -> stack
       | "ref", Num(k) :: stack -> dict_find k :: stack
-      | "refl", Term(t) :: stack -> Thm(Thm.define_thm "dictRefl" ~untyped:true (Thm.refl t)) :: stack
+      | "refl", Term(t) :: stack -> Thm(Thm.define_thm "dictRefl" ~untyped:true ~local:true (Thm.refl t)) :: stack
       | "remove", Num(k) :: stack ->
         let obj = dict_find k in
         Hashtbl.remove dict k;
@@ -131,7 +131,7 @@ let process_command cmd stack =
           | _ -> failwith "not a term substitution" in
         let theta = List.map extract_type_subst theta in
         let sigma = List.map extract_term_subst sigma in
-        Thm(Thm.define_thm "dictSubst" ~untyped:true (Thm.subst theta sigma thm)) :: stack
+        Thm(Thm.define_thm "dictSubst" ~untyped:true ~local:true (Thm.subst theta sigma thm)) :: stack
       | "thm", Term(p) :: List(qs) :: Thm(thm) :: stack ->
         let extract_term obj =
           match obj with
@@ -158,9 +158,9 @@ let process_command cmd stack =
       (* Version 6 features captured here *)
       | "pragma", _ :: stack -> stack (*simply ignore it*)
       | "hdTl" , List(hd :: tail) ::stack -> List(tail):: hd :: stack
-      | "proveHyp", Thm (thm_q) :: Thm (thm_p) :: stack -> Thm(Thm.define_thm "dictPH" ~untyped:true (Thm.proveHyp thm_q thm_p)) :: stack
-      | "sym", Thm (thm1) :: stack -> Thm (Thm.define_thm "dictSYM" ~untyped:true (Thm.sym thm1)) :: stack
-      | "trans", Thm (thm_t2't3) :: Thm(thm_t1t2) :: stack -> Thm (Thm.define_thm "dictTRANS" ~untyped:true (Thm.trans thm_t1t2 thm_t2't3)) :: stack
+      | "proveHyp", Thm (thm_q) :: Thm (thm_p) :: stack -> Thm(Thm.define_thm "dictPH" ~untyped:true ~local:true (Thm.proveHyp thm_q thm_p)) :: stack
+      | "sym", Thm (thm1) :: stack -> Thm (Thm.define_thm "dictSYM" ~untyped:true ~local:true (Thm.sym thm1)) :: stack
+      | "trans", Thm (thm_t2't3) :: Thm(thm_t1t2) :: stack -> Thm (Thm.define_thm "dictTRANS" ~untyped:true ~local:true (Thm.trans thm_t1t2 thm_t2't3)) :: stack
       | "version" , _ :: stack -> stack (*ignore the version thing*)
       (* | "defineConst", Term(t) :: Name(n) :: stack -> Thm(Thm.define_const n t) :: Const(n) :: stack *)
       | "defineConstList", Thm(thm) :: List(nv_List) :: stack ->
@@ -172,23 +172,23 @@ let process_command cmd stack =
         Thm (Thm.define_const_list thm nv_list) :: List(c_list) :: stack
       
       (* ND rules *)
-      | "truth", _ -> Thm (Thm.define_thm "dictT" ~untyped:true (Thm.truth_thm)) :: stack
-      | "conj",Thm(thm1)::Thm(thm2)::stack ->  Thm(Thm.define_thm "dictConj" ~untyped:true (Thm.conj thm1 thm2)) :: stack
-      | "conjunct1",Thm(thm) :: stack -> Thm(Thm.define_thm "dictConj1" ~untyped:true (Thm.conjunct1 thm)) :: stack
-      | "conjunct2",Thm(thm) :: stack -> Thm(Thm.define_thm "dictConj2" ~untyped:true (Thm.conjunct2 thm)) :: stack
+      | "truth", _ -> Thm (Thm.define_thm "dictT" ~untyped:true ~local:true (Thm.truth_thm)) :: stack
+      | "conj",Thm(thm1)::Thm(thm2)::stack ->  Thm(Thm.define_thm "dictConj" ~untyped:true ~local:true (Thm.conj thm1 thm2)) :: stack
+      | "conjunct1",Thm(thm) :: stack -> Thm(Thm.define_thm "dictConj1" ~untyped:true ~local:true (Thm.conjunct1 thm)) :: stack
+      | "conjunct2",Thm(thm) :: stack -> Thm(Thm.define_thm "dictConj2" ~untyped:true ~local:true (Thm.conjunct2 thm)) :: stack
       | "contr", Term(tm) :: Thm(thm) :: stack ->
-		Thm(Thm.define_thm "dictContr" ~untyped:true (Thm.contr tm thm)) :: stack
+		Thm(Thm.define_thm "dictContr" ~untyped:true ~local:true (Thm.contr tm thm)) :: stack
       | "disch", Term(tm) :: Thm(thm) :: stack ->
-		Thm(Thm.define_thm "dictDisch" ~untyped:true (Thm.disch thm tm)) :: stack
+		Thm(Thm.define_thm "dictDisch" ~untyped:true ~local:true (Thm.disch thm tm)) :: stack
       | "mp", Thm(thm1) :: Thm(thm2) :: stack ->
-		Thm(Thm.define_thm "dictMp" ~untyped:true (Thm.mp thm1 thm2)) :: stack
-      | "disjcases",Thm(thm2)::Thm(thm1)::Thm(thm)::stack -> Thm(Thm.define_thm "dictDisj" ~untyped:true (Thm.disjcases thm thm1 thm2)) :: stack
-      | "disj1",Term(tm) :: Thm(thm) :: stack -> Thm(Thm.define_thm "dictDisj1" ~untyped:true (Thm.disj1 thm tm)) :: stack
-      | "disj2",Term(tm) :: Thm(thm) :: stack -> Thm(Thm.define_thm "dictDisj2" ~untyped:true (Thm.disj2 thm tm)) :: stack
-      | "gen",Term(tm) :: Thm(thm) :: stack -> Thm(Thm.define_thm "dictGen" ~untyped:true (Thm.gen tm thm)) :: stack
-      | "spec",Thm(thm) :: Term(tm) :: stack -> Thm(Thm.define_thm "dictSpec" ~untyped:true (Thm.spec tm thm)) :: stack
-      | "exists",Thm(thm) :: Term(y) :: Term(etm) :: stack -> Thm(Thm.define_thm "dictExists" ~untyped:true (Thm.exists etm y thm)) :: stack
-      | "choose",Thm(thm2) :: Thm(thm1) :: Term(v) :: stack -> Thm(Thm.define_thm "dictChoose" ~untyped:true (Thm.choose v thm1 thm2)) :: stack
+		Thm(Thm.define_thm "dictMp" ~untyped:true ~local:true (Thm.mp thm1 thm2)) :: stack
+      | "disjcases",Thm(thm2)::Thm(thm1)::Thm(thm)::stack -> Thm(Thm.define_thm "dictDisj" ~untyped:true ~local:true (Thm.disjcases thm thm1 thm2)) :: stack
+      | "disj1",Term(tm) :: Thm(thm) :: stack -> Thm(Thm.define_thm "dictDisj1" ~untyped:true ~local:true (Thm.disj1 thm tm)) :: stack
+      | "disj2",Term(tm) :: Thm(thm) :: stack -> Thm(Thm.define_thm "dictDisj2" ~untyped:true ~local:true (Thm.disj2 thm tm)) :: stack
+      | "gen",Term(tm) :: Thm(thm) :: stack -> Thm(Thm.define_thm "dictGen" ~untyped:true ~local:true (Thm.gen tm thm)) :: stack
+      | "spec",Thm(thm) :: Term(tm) :: stack -> Thm(Thm.define_thm "dictSpec" ~untyped:true ~local:true (Thm.spec tm thm)) :: stack
+      | "exists",Thm(thm) :: Term(y) :: Term(etm) :: stack -> Thm(Thm.define_thm "dictExists" ~untyped:true ~local:true (Thm.exists etm y thm)) :: stack
+      | "choose",Thm(thm2) :: Thm(thm1) :: Term(v) :: stack -> Thm(Thm.define_thm "dictChoose" ~untyped:true ~local:true (Thm.choose v thm1 thm2)) :: stack
       
       | c, _ -> failwith (Printf.sprintf "invalid command/state: %s" c)
 

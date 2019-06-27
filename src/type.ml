@@ -193,7 +193,7 @@ let define_op op arity =
   ops := (op, arity) :: !ops
 
 (** Define the Dedukti term [id := |a|]. *)
-let define_type a =
+let define_type ?(local=false) a =
   if !Options.language <> Options.No && not (TypeSharing.mem a) then (
       let fv = free_vars [] a in
       let fv' = translate_vars fv in
@@ -201,7 +201,7 @@ let define_type a =
       let a' = Dedukti.lams fv' (translate_type a) in
       let id = (TypeSharing.add a) in
       let id' = translate_type_id id in
-      Output.print_definition ~untyped:true id' arity' a');
+      Output.print_definition ~untyped:true ~local:local id' arity' a');
   a
 
 (** Smart constructors *)

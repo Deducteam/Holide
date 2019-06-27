@@ -31,7 +31,7 @@ let print_command command args b =
   if b then Printf.fprintf !Options.output_channel "\n"
 
 (** Print the declaration [x : a]. *)
-let print_declaration x a =
+let print_declaration ?(local=false) x a =
   Printf.fprintf !Options.output_channel "\n";
   if !Options.language = Options.Coq then Printf.fprintf !Options.output_channel "Parameter ";
   Printf.fprintf !Options.output_channel "%s : %a.\n" x Dedukti.print_term a
@@ -39,13 +39,14 @@ let print_declaration x a =
 (** Print the definition [x : a := b] or [x := b].
     If [opaque] is set to [true], the definition will be opaque.
     If [untyped] is set to true, the definition will be untyped. *)
-let print_definition ?(opaque=false) ?(untyped=false) x a b =
+let print_definition ?(opaque=false) ?(untyped=false) ?(local=false) x a b =
   let untyped = !Options.untyped_def && untyped in
   let chan = !Options.output_channel in
   match !Options.language with
   | Options.No -> ()
   | Options.Dk ->
      Printf.fprintf chan "\n";
+     if local then Printf.fprintf chan "local ";
      if opaque
      then Printf.fprintf chan "thm %s" x
      else Printf.fprintf chan "def %s" x;

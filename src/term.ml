@@ -212,6 +212,14 @@ let rec translate_vars context vars =
   let vars' = List.map (fun (x, a) -> (translate_var context (x, a), translate_type a)) vars in
   (vars', context)
 
+(** Translate the list of term variables [x1, a1; ...; xn, an]
+    into the Dedukti terms [x1 : ||a1||; ...; xn : ||an||] and add them to
+    the context, without sharing. *)
+let rec translate_vars_total context vars =
+  let context = List.rev_append vars context in
+  let vars' = List.map (fun (x, a) -> (translate_var context (x, a), translate_type_total a)) vars in
+  (vars', context)
+
 (** Translate the variable [x] of type [a] as a Dedukti term. Sometimes the
     variable is not bound by the context, in which case we should eliminate it
     by replacing it with a witness for the type [a]. *)
@@ -339,7 +347,7 @@ let rec translate_term_total context t =
       let b' = Type.translate_type_total b in
       let x' = translate_var ((x, a) :: context) (x, a) in
       let t' = translate_term_total ((x, a) :: context) t in
-      mk_lam a' (translate_type a) b' x' t'
+      mk_lam a' (translate_type_total a) b' x' t'
     | App(t, u) ->
       let a, b = Type.get_arr (type_of t) in
       let a' = Type.translate_type_total a in
@@ -375,9 +383,14 @@ let declare_cst ?(intyop=false) c a =
 	let () = declared := (c,Name.escape (Input.get_module_name()))::!declared in
 	let c' = translate_cst c in  
 	let ftv' = Type.translate_vars ftv in
+	if (not intyop) then begin
 	let a' = Dedukti.pies ftv' (translate_type a) in
 	Output.print_comment (Printf.sprintf "Constant %s" c);
-	Output.print_declaration c' a');
+	Output.print_declaration c' a' end
+	else begin
+	let a' = Dedukti.pies ftv' (translate_type_total a) in
+	Output.print_comment (Printf.sprintf "Constant %s" c);
+	Output.print_declaration c' a' end);	
   csts := (c, a) :: !csts)
 
 
@@ -388,15 +401,15 @@ let define_cst c a t =
     let ftv = Type.free_vars [] a in
     let c' = translate_cst c in
     let ftv' = Type.translate_vars ftv in
-    let a' = Dedukti.pies ftv' (translate_type a) in
-    let t' = Dedukti.lams ftv' (translate_term [] t) in
+    let a' = Dedukti.pies ftv' (translate_type_total a) in
+    let t' = Dedukti.lams ftv' (translate_term_total [] t) in
     Output.print_comment (Printf.sprintf "Constant %s" c);
     Output.print_definition c' a' t');
   csts := (c, a) :: !csts
 
 
 (** Define the term [id := t]. *)
-let define_term t =
+let define_term ?(local=false) t =
   if !Options.language <> Options.No && not (TermSharing.mem t) then (
       let a = type_of t in
       let ftv = free_type_vars [] t in
@@ -407,7 +420,7 @@ let define_term t =
       let t' = Dedukti.lams ftv' (Dedukti.lams fv' (translate_term context t)) in
       let id = TermSharing.add t in
       let id' = translate_id id in
-      Output.print_definition ~untyped:true id' a' t');
+      Output.print_definition ~untyped:true ~local:local id' a' t');
   t
 
 (** Smart constructors *)

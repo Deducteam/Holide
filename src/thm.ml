@@ -147,6 +147,14 @@ let rec translate_hyps term_context context hyps =
   let hyps' = List.map (fun p -> (translate_hyp context p, translate_prop term_context p)) hyps in
   (hyps', context)
 
+(** Translate the list of hypotheses [p1; ...; pn]
+    into the Dedukti terms [x1 : ||p1||; ...; xn : ||pn||] and add them to
+    the context, without using the sharing. *)
+let rec translate_hyps_total term_context context hyps =
+  let context = List.rev_append hyps context in
+  let hyps' = List.map (fun p -> (translate_hyp context p, translate_prop_total term_context p)) hyps in
+  (hyps', context)
+
 (** Translate the HOL theorem [thm] as a Dedukti term. *)
 let rec translate_thm term_context context ((gamma, p, proof) as thm) theta =
   try
@@ -435,20 +443,29 @@ let rec translate_thm term_context context ((gamma, p, proof) as thm) theta =
     | _ -> failwith "Not implemented"
 
 (** Declare the axiom [gamma |- p] **)
-let declare_axiom comment (gamma, p) =
+let declare_axiom ?(local=false) comment (gamma, p) =
   let thm = (gamma, p, Axiom(gamma, p)) in
   if !Options.language <> Options.No && not (ThmSharing.mem (thm,true))
 	&& not (ThmSharing.mem (thm,false))then (
       let ftv = List.fold_left Term.free_type_vars [] (p :: (TermSet.elements gamma)) in
       let fv = List.fold_left Term.free_vars [] (p :: (TermSet.elements gamma)) in
       let ftv' = Type.translate_vars ftv in
-      let fv', term_context = Term.translate_vars [] fv in
-      let gamma', context = translate_hyps term_context [] (TermSet.elements gamma) in
-      let p' = Dedukti.pies ftv' (Dedukti.pies fv' (Dedukti.pies gamma' (translate_prop term_context p))) in
+      if local then begin
+      let fv', term_context = Term.translate_vars_total [] fv in
+      let gamma', context = translate_hyps_total term_context [] (TermSet.elements gamma) in
+      let p' = Dedukti.pies ftv' (Dedukti.pies fv' (Dedukti.pies gamma' (translate_prop_total term_context p))) in
       let id = ThmSharing.add ((gamma, p, Axiom(gamma, p)),false) in
       let id' = translate_id id in
       Output.print_comment comment;
-      Output.print_declaration id' p');
+      Output.print_declaration id' p' end
+      else begin
+      let fv', term_context = Term.translate_vars_total [] fv in
+      let gamma', context = translate_hyps term_context [] (TermSet.elements gamma) in
+      let p' = Dedukti.pies ftv' (Dedukti.pies fv' (Dedukti.pies gamma' (translate_prop_total term_context p))) in
+      let id = ThmSharing.add ((gamma, p, Axiom(gamma, p)),false) in
+      let id' = translate_id id in
+      Output.print_comment comment;
+      Output.print_declaration id' p' end);
   thm
 
 
@@ -479,7 +496,7 @@ let declare_namedaxiom comment (gamma, p) (name:string) =
   thm
 
 (** Define the theorem [id := thm] *)
-let define_thm comment ?(untyped=false) ((gamma, p, pi) as thm) =
+let define_thm comment ?(untyped=false) ?(local=false) ((gamma, p, pi) as thm) =
   (if !Options.language <> Options.No && not (ThmSharing.mem (thm,true))
 	&& not (ThmSharing.mem (thm,false)) then
 	let ftv = free_type_vars thm in
@@ -495,14 +512,14 @@ let define_thm comment ?(untyped=false) ((gamma, p, pi) as thm) =
 		  let id = ThmSharing.add (thm,false) in
 		  let id' = translate_id id in
 		  Output.print_comment comment;
-		  Output.print_definition ~opaque:true ~untyped:untyped id' p' thm';
+		  Output.print_definition ~opaque:true ~untyped:untyped ~local:local id' p' thm';
 	  | _ ->
 		  let p' = Dedukti.pies ftv' (Dedukti.pies fv' (Dedukti.pies gamma' (translate_prop term_context p))) in
 		  let thm' = Dedukti.lams ftv' (Dedukti.lams fv' (Dedukti.lams gamma' (translate_thm term_context context thm []))) in
 		  let id = ThmSharing.add (thm,false) in
 		  let id' = translate_id id in
 		  Output.print_comment comment;
-		  Output.print_definition ~opaque:true ~untyped:untyped id' p' thm');
+		  Output.print_definition ~opaque:true ~untyped:untyped ~local:local id' p' thm');
 	thm
 
 let define_namedthm comment ?(untyped=false) ((gamma, p, _) as thm) (name:string) =
@@ -510,8 +527,8 @@ let define_namedthm comment ?(untyped=false) ((gamma, p, _) as thm) (name:string
       let ftv = free_type_vars thm in
       let fv = free_vars thm in
       let ftv' = Type.translate_vars ftv in
-      let fv', term_context = Term.translate_vars [] fv in
-      let gamma', context = translate_hyps term_context [] (TermSet.elements gamma) in
+      let fv', term_context = Term.translate_vars_total [] fv in
+      let gamma', context = translate_hyps_total term_context [] (TermSet.elements gamma) in
       let p' = Dedukti.pies ftv' (Dedukti.pies fv' (Dedukti.pies gamma' (translate_prop_total term_context p))) in
       let thm' = Dedukti.lams ftv' (Dedukti.lams fv' (Dedukti.lams gamma' (translate_thm term_context context thm []))) in
       let id = ThmSharing.add (thm,true) in
