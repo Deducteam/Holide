@@ -46,7 +46,7 @@ let print_definition ?(opaque=false) ?(untyped=false) ?(local=false) x a b =
   | Options.No -> ()
   | Options.Dk ->
      Printf.fprintf chan "\n";
-     if local then Printf.fprintf chan "local ";
+     (*if local then Printf.fprintf chan "local ";*)
      if opaque
      then Printf.fprintf chan "thm %s" x
      else Printf.fprintf chan "def %s" x;
