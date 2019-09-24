@@ -29,198 +29,81 @@ select : a : type -> term (arr (arr a bool) a).
 witness : a : type -> term a.
 cond : a : type -> term (arr bool (arr a (arr a a))).
 
-(; ------------------------------------- ;)
-(; Defining the constructive connectives ;)
-(; ------------------------------------- ;)
+(; --------------------------------------- ;)
+(; Defining the intuitionistic connectives ;)
+(; --------------------------------------- ;)
 
 imp : o -> o -> o.
-[x,y] eps (imp x y) --> (eps x) -> (eps y).
-
 and : o -> o -> o .
-[x , y ] eps ( and x y ) --> z : o -> ( eps x -> eps y -> eps z ) -> eps z .
-
-true : o .
-[ ] eps true --> z : o -> ( eps z ) -> ( eps z ).
-
-false : o .
-[ ] eps false --> z : o -> ( eps z ).
-
+true : o.
+false : o.
 def not : o -> o := x : o => imp x false .
-
 or : o -> o -> o .
-[x , y ] eps ( or x y )
---> z : o -> ( eps x -> eps z ) -> ( eps y -> eps z ) -> eps z .
-
 forall : (s : type) -> ( (term s) -> o ) -> o .
-[ s,y ] eps ( forall s y ) --> x : term s -> eps ( y x ).
-
 exists : (s : type) -> ( (term s) -> o ) -> o .
-[ s,y ] eps ( exists s y ) --> z : o -> ( x : term s -> eps ( y x ) -> ( eps z )) -> eps z .
 
-(; ----------------------------- ;)
-(; Properties of the connectives ;)
-(; ----------------------------- ;)
+true_i : eps (true).
+and_i : (a : o) -> (b : o) -> (eps a) -> (eps b) -> eps (and a b).
+or_il : (a : o) -> (b : o) -> (eps a) -> eps (or a b).
+or_ir : (a : o) -> (b : o) -> (eps b) -> eps (or a b).
+imp_i : (a : o) -> (b : o) -> (eps a -> eps b) -> eps (imp a b).
+exists_i : (s : type) -> (t : term s) -> (y : (term s -> o)) -> (eps (y t)) -> eps (exists s y).
+forall_i : (s : type) -> (y : (term s -> o)) -> (t : term s -> eps (y t)) -> eps (forall s y).
 
-def axiom : (z : o) -> (eps z) -> (eps z) := z => s => s.
-
-def true_i : eps (true) := z : o => s : eps (z) => s.
-
-def and_i : (a : o) -> (b : o) -> (eps a) -> (eps b) -> eps (and a b) :=
-a => b => ea => eb => (z => f => (f ea) eb).
-
-def or_il : (a : o) -> (b : o) -> (eps a) -> eps (or a b) :=
-a => b => ea => (z => f1 => f2 => f1 ea).
-
-def or_ir : (a : o) -> (b : o) -> (eps b) -> eps (or a b) :=
-a => b => eb => (z => f1 => f2 => f2 eb).
-
-def imp_i : (a : o) -> (b : o) -> (eps a -> eps b) -> eps (imp a b) :=
-a => b => eab => eab.
+false_e : (a : o) -> (eps false) -> eps a.
+and_el : (a : o) -> (b : o) -> eps (and a b) -> eps a.
+and_er : (a : o) -> (b : o) -> eps (and a b) -> eps b.
+imp_e : (a : o) -> (b : o) -> eps (imp a b) -> eps a -> eps b.
+or_e : (a : o) -> (b : o) -> (c : o) -> eps (or a b) -> (eps a -> eps c) -> (eps b -> eps c) -> eps c.
+fa_e : (s : type) -> (t : term s) -> (y : (term s -> o)) -> eps (forall s y) -> eps (y t).
+ex_e : (s : type) -> (a : o) -> (y : (term s -> o)) -> eps (exists s y) ->
+((t : term s) -> eps (y t) -> eps a) -> eps a.
 
 def not_i : (a : o) -> (eps a -> eps false) -> eps (not a) :=
 a => eafalse => imp_i a false eafalse.
 
-def exists_i : (s : type) -> (t : term s) -> (y : (term s -> o)) -> (eps (y t)) -> eps (exists s y) :=
-s => t => y => eyt => (z => f => f t eyt).
-
-def forall_i : (s : type) -> (y : (term s -> o)) -> (t : term s -> eps (y t)) -> eps (forall s y) :=
-s => y => teyt => (x => teyt x).
-
-def false_e : (a : o) -> (eps false) -> eps a :=
-a => efalse => efalse a.
-
-def and_el : (a : o) -> (b : o) -> eps (and a b) -> eps a :=
-a => b => eab => eab a (ea => eb => ea).
-
-def and_er : (a : o) -> (b : o) -> eps (and a b) -> eps b :=
-a => b => eab => eab b (ea => eb => eb).
-
-def imp_e : (a : o) -> (b : o) -> eps (imp a b) -> eps a -> eps b :=
-a => b => eiab => ea => eiab ea.
-
 def not_e : (a : o) -> (b : o) -> eps a -> eps (not a) -> eps b :=
 a => b => ea => ena => false_e b (imp_e a false ena ea).
 
-def or_e : (a : o) -> (b : o) -> (c : o) ->
-eps (or a b) -> (eps a -> eps c) -> (eps b -> eps c) -> eps c :=
-a => b => c => eoab => eac => ebc => eoab c eac ebc.
-
-def fa_e : (s : type) -> (t : term s) -> (y : (term s -> o)) -> eps (forall s y) -> eps (y t) :=
-s => t => y => efay => efay t.
-
-def ex_e : (s : type) -> (a : o) -> (y : (term s -> o)) -> eps (exists s y) ->
-((t : term s) -> eps (y t) -> eps a) -> eps a :=
-s => a => y => eexy => f => eexy a f.
-
-(; ---------------------- ;)
-(; Defining the embedding ;)
-(; ---------------------- ;)
-
+(; ---------------------------------- ;)
 (; Defining the classical connectives ;)
+(; ---------------------------------- ;)
 
-def db_not : o -> o.
-[x] db_not x --> not (not x).
+true_c : o.
+false_c : o.
+imp_c : o -> o -> o.
+and_c : o -> o -> o.
+or_c : o -> o -> o.
+forall_c : (s : type) -> (term s -> o) -> o.
+exists_c : (s : type) -> (term s -> o) -> o.
 
-def true_c : o := db_not true.
+def not_c : o -> o := x => imp_c x false_c.
 
-def false_c : o := db_not false.
+true_c_i : eps (true_c).
+and_c_i : (a : o) -> (b : o) -> (eps a) -> (eps b) -> eps (and_c a b).
+or_c_il : (a : o) -> (b : o) -> (eps a) -> eps (or_c a b).
+or_c_ir : (a : o) -> (b : o) -> (eps b) -> eps (or_c a b).
+imp_c_i : (a : o) -> (b : o) -> (eps a -> eps b) -> eps (imp_c a b).
+exists_c_i : (s : type) -> (t : term s) -> (y : (term s -> o)) -> (eps (y t)) -> eps (exists_c s y).
+forall_c_i : (s : type) -> (y : (term s -> o)) -> (t : term s -> eps (y t)) -> eps (forall_c s y).
 
-def not_c : o -> o.
-[x] not_c x -->  db_not (not (db_not x)).
+false_c_e : (a : o) -> (eps false_c) -> eps a.
+and_c_el : (a : o) -> (b : o) -> eps (and_c a b) -> eps a.
+and_c_er : (a : o) -> (b : o) -> eps (and_c a b) -> eps b.
+imp_c_e : (a : o) -> (b : o) -> eps (imp_c a b) -> eps a -> eps b.
+or_c_e : (a : o) -> (b : o) -> (c : o) -> eps (or_c a b) -> (eps a -> eps c) -> (eps b -> eps c) -> eps c.
+fa_c_e : (s : type) -> (t : term s) -> (y : (term s -> o)) -> eps (forall_c s y) -> eps (y t).
+ex_c_e : (s : type) -> (a : o) -> (y : (term s -> o)) -> eps (exists_c s y) -> ((t : term s) -> eps (y t) -> eps a) -> eps a.
 
-def imp_c : o -> o -> o.
-[a,b] imp_c a b --> db_not (imp (db_not a) (db_not b)).
+def not_c_i : (a : o) -> (eps a -> eps false_c) -> eps (not_c a) :=
+a => eafalse => imp_c_i a false_c eafalse.
 
-def and_c : o -> o -> o.
-[a,b] and_c a b --> db_not (and (db_not a) (db_not b)).
-
-def or_c : o -> o -> o.
-[a,b] or_c a b --> db_not (or (db_not a) (db_not b)).
-
-def forall_c : (s : type) -> (term s -> o) -> o := s => y => db_not (forall s (t => db_not (y t))).
-
-def exists_c : (s : type) -> (term s -> o) -> o := s => y => db_not (exists s (t => db_not (y t))).
+def not_c_e : (a : o) -> (b : o) -> eps a -> eps (not_c a) -> eps b :=
+a => b => ea => ena => false_c_e b (imp_c_e a false_c ena ea).
 
 (; Excluded middle ;)
 
-def F2 := x : o => or (db_not x) (db_not (not_c x)).
-def F1 := x : o => not (F2 x).
-def F3 := x : o => not (F1 x).
-#ASSERT F3 == x : o => or_c x (not_c x).
-
-def Ax0 := x : o => ef : eps (F1 x) => enx : eps (not x) =>
-		en6x : eps (db_not (db_not (db_not x))) =>
-		en4x : eps (db_not (db_not x)) =>
-		en2x : eps (db_not x) =>
-		en2x.
-
-def Ax1 := x : o => ef : eps (F1 x) => enx : eps (not x) =>
-		en6x : eps (db_not (db_not (db_not x))) =>
-		en4x : eps (db_not (db_not x)) =>
-		en2x : eps (db_not x) =>
-		enx.
-
-def N0 := x : o => ef : eps (F1 x) => enx : eps (not x) =>
-		en6x : eps (db_not (db_not (db_not x))) =>
-		en4x : eps (db_not (db_not x)) =>
-		en2x : eps (db_not x) =>
-		not_e (not x) false	(Ax1 x ef enx en6x en4x en2x)
-								(Ax0 x ef enx en6x en4x en2x).
-
-def N1 := x : o => ef : eps (F1 x) => enx : eps (not x) =>
-		en6x : eps (db_not (db_not (db_not x))) =>
-		en4x : eps (db_not (db_not x)) =>
-		not_i (db_not x) (N0 x ef enx en6x en4x).
-
-def Ax2 := x : o => ef : eps (F1 x) => enx : eps (not x) =>
-		en6x : eps (db_not (db_not (db_not x))) =>
-		en4x : eps (db_not (db_not x)) =>
-		en4x.
-
-def N2 := x : o => ef : eps (F1 x) => enx : eps (not x) =>
-		en6x : eps (db_not (db_not (db_not x))) =>
-		en4x : eps (db_not (db_not x)) =>
-		not_e (not (db_not x)) false	(N1 x ef enx en6x en4x)
-										(Ax2 x ef enx en6x en4x).
-
-def N3 := x : o => ef : eps (F1 x) => enx : eps (not x) =>
-		en6x : eps (db_not (db_not (db_not x))) =>
-		not_i (db_not (db_not x)) (N2 x ef enx en6x).
-
-def Ax3 := x : o => ef : eps (F1 x) => enx : eps (not x) =>
-		en6x : eps (db_not (db_not (db_not x))) =>
-		en6x.
-
-def N4 :=  x : o => ef : eps (F1 x) => enx : eps (not x) =>
-		en6x : eps (db_not (db_not (db_not x))) =>
-		not_e (not (db_not (db_not x))) false	(N3 x ef enx en6x)
-												(Ax3 x ef enx en6x).
-
-def N5 := x : o => ef : eps (F1 x) => enx : eps (not x) =>
-		not_i (db_not (db_not (db_not x))) (N4 x ef enx).
-
-def N6 := x : o => ef : eps (F1 x) => enx : eps (not x) =>
-		or_ir (db_not x) (db_not (db_not (db_not (not x))))
-					(N5 x ef enx).
-
-def Ax4 :=  x : o => ef : eps (F1 x) => enx : eps (not x) => ef.
-
-def N7 := x : o => ef : eps (F1 x) => enx : eps (not x) =>
-		not_e (F2 x) false (N6 x ef enx) (Ax4 x ef enx).
-
-def N8 := x : o => ef : eps (F1 x) => not_i (not x) (N7 x ef).
-
-def N9 := x : o => ef : eps (F1 x) =>
-		or_il (db_not x) (db_not (db_not (db_not (not x)))) (N8 x ef).
-
-def Ax5 := x : o => ef : eps (F1 x) => ef.
-
-def N10 := x : o => ef : eps (F1 x) =>
-		not_e (F2 x) false (N9 x ef) (Ax5 x ef).
-
-def N11 := x : o => not_i (F1 x) (N10 x).
-
-#ASSERT N11 : x:o -> eps (F3 x).
+em : x : o -> eps (or_c x (not_c x)).
 
 (;------------;)
 (; HOL Proofs ;)
