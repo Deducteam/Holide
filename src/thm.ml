@@ -303,12 +303,12 @@ let rec translate_thm term_context context ((gamma, p, proof) as thm) theta =
       let gamma' = List.map (fun p -> Dedukti.var (translate_hyp context p)) (List.map term_subst (TermSet.elements gamma)) in
       Dedukti.apps (Dedukti.apps (Dedukti.apps thm' ftv') fv') gamma'
     
-    | Truth -> Dedukti.var (Name.hol "true_i")
+    | Truth -> Dedukti.var (Name.hol "true_c_i")
 	
 	| Mp (((_,p1,_) as th1),((_,p2,_) as th2)) ->
       let t1, t2 = Term.get_bin_op "Data.Bool.==>" p1 in
       if Term.compare t1 p2 <> 0 then failwith "failed at MP" else
-      let mp' = Dedukti.var (Name.hol "imp_e") in
+      let mp' = Dedukti.var (Name.hol "imp_c_e") in
       let t1' = Term.translate_term_ws term_context t1 theta in
       let t2' = Term.translate_term_ws term_context t2 theta in
       let th1' = translate_thm term_context context th1 theta in
@@ -316,7 +316,7 @@ let rec translate_thm term_context context ((gamma, p, proof) as thm) theta =
       Dedukti.apps mp' [t1'; t2'; th1'; th2']
 		
 	| Disch ((_,p,_) as th,tm) ->
-      let disch' = Dedukti.var (Name.hol "imp_i") in
+      let disch' = Dedukti.var (Name.hol "imp_c_i") in
       let p' = Term.translate_term term_context p in
       let tm' = Term.translate_term term_context tm in
       let htm' = translate_hyp (tm :: context) tm in
@@ -324,7 +324,7 @@ let rec translate_thm term_context context ((gamma, p, proof) as thm) theta =
       Dedukti.apps disch' [tm'; p'; th']
 		
 	| Conj ( ((_,t1,_) as th1) , ((_,t2,_) as th2) ) -> 
-      let conj' = Dedukti.var (Name.hol "and_i") in
+      let conj' = Dedukti.var (Name.hol "and_c_i") in
       let t1' = Term.translate_term term_context t1 in
       let t2' = Term.translate_term term_context t2 in
       let th1' = translate_thm term_context context th1 theta in
@@ -333,7 +333,7 @@ let rec translate_thm term_context context ((gamma, p, proof) as thm) theta =
 		
 	| Conjunct1 ((_,t,_) as th) ->
       let t1, t2 = Term.get_bin_op "Data.Bool./\\" t in
-      let conj1' = Dedukti.var (Name.hol "and_el") in
+      let conj1' = Dedukti.var (Name.hol "and_c_el") in
       let t1' = Term.translate_term_ws term_context t1 theta in
       let t2' = Term.translate_term_ws term_context t2 theta in
       let th' = translate_thm term_context context th theta in
@@ -341,27 +341,27 @@ let rec translate_thm term_context context ((gamma, p, proof) as thm) theta =
 
 	| Conjunct2 ((_,t,_) as th)  ->
       let t1, t2 = Term.get_bin_op "Data.Bool./\\" t in
-      let conj2' = Dedukti.var (Name.hol "and_er") in
+      let conj2' = Dedukti.var (Name.hol "and_c_er") in
       let t1' = Term.translate_term_ws term_context t1 theta in
       let t2' = Term.translate_term_ws term_context t2 theta in
       let th' = translate_thm term_context context th theta in
       Dedukti.apps conj2' [t1'; t2'; th']
       
 	| Contr (th,tm) ->
-	  let contr' = Dedukti.var (Name.hol "false_e") in
+	  let contr' = Dedukti.var (Name.hol "false_c_e") in
       let tm' = Term.translate_term term_context tm in
       let th' = translate_thm term_context context th theta in
       Dedukti.apps contr' [tm' ; th']
     
 	| Disj1 (((_,a,_) as th),b) ->
-	  let disj1' = Dedukti.var (Name.hol "or_il") in
+	  let disj1' = Dedukti.var (Name.hol "or_c_il") in
       let th' = translate_thm term_context context th theta in
       let b' = Term.translate_term term_context b in
       let a' = Term.translate_term term_context a in
 	  Dedukti.apps disj1' [a' ; b' ; th']
 	  
 	| Disj2 (((_,b,_) as th),a) ->
-	  let disj2' = Dedukti.var (Name.hol "or_ir") in
+	  let disj2' = Dedukti.var (Name.hol "or_c_ir") in
       let th' = translate_thm term_context context th theta in
       let b' = Term.translate_term term_context b in
       let a' = Term.translate_term term_context a in
@@ -369,7 +369,7 @@ let rec translate_thm term_context context ((gamma, p, proof) as thm) theta =
 	  
 	| Disjcases (((_,ab,_) as th),((_,c1,_) as th1) , ((_,c2,_) as th2) ) ->
       if Term.compare c1 c2 <> 0 then failwith "failed at DISJCASES" else
-	  let disjcases' = Dedukti.var (Name.hol "or_e") in
+	  let disjcases' = Dedukti.var (Name.hol "or_c_e") in
 	  let a, b = Term.get_bin_op "Data.Bool.\\/" ab in
       let a' = Term.translate_term term_context a in
       let b' = Term.translate_term term_context b in
@@ -385,7 +385,7 @@ let rec translate_thm term_context context ((gamma, p, proof) as thm) theta =
 	  begin
 	  match x with
 	  Term.Var (xn,xty) ->
-		  let gen' = Dedukti.var (Name.hol "forall_i") in
+		  let gen' = Dedukti.var (Name.hol "forall_c_i") in
 		  let xty' = Term.translate_type xty in
 		  let xty'' = Type.translate_type xty in
 		  let x' = Term.translate_var ((xn, xty) :: term_context) (xn, xty) in
@@ -397,7 +397,7 @@ let rec translate_thm term_context context ((gamma, p, proof) as thm) theta =
 		
 
 	| Spec (s,((_,t,_) as th)) ->
-	  let spec' = Dedukti.var (Name.hol "fa_e") in
+	  let spec' = Dedukti.var (Name.hol "fa_c_e") in
 	  let p = Term.get_un_op "Data.Bool.!" t in
 	  let a,_ = Type.get_arr (Term.type_of p) in
 	  let a' = Type.translate_type_ws theta a in
@@ -407,7 +407,7 @@ let rec translate_thm term_context context ((gamma, p, proof) as thm) theta =
 	  Dedukti.apps spec' [a' ; s' ; p' ; th']
 	  
 	| Exists (etm,s,((_,t,_) as th)) ->
-	  let exists' = Dedukti.var (Name.hol "exists_i") in
+	  let exists' = Dedukti.var (Name.hol "exists_c_i") in
 	  let p = Term.get_un_op "Data.Bool.?" etm in
 	  let a,_ = Type.get_arr (Term.type_of p) in
 	  let a' = Type.translate_type a in
@@ -422,7 +422,7 @@ let rec translate_thm term_context context ((gamma, p, proof) as thm) theta =
 	  match v with
 	  Term.Var vv ->
 	  begin
-	  let choose' = Dedukti.var (Name.hol "ex_e") in
+	  let choose' = Dedukti.var (Name.hol "ex_c_e") in
 	  let p = Term.get_un_op "Data.Bool.?" t1 in
 	  let (xp,a),bodp = Term.get_lam p in
 	  let pat = Term.subst [((xp,a),v)] bodp in

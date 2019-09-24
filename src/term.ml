@@ -119,14 +119,14 @@ let alpha_equiv t u =
 
 (** Interpretation of special constants **)
 let base_interpretation = [
-  ("Data.Bool./\\",(Type.App ("->",[Type.App ("bool",[]);Type.App ("->",[Type.App ("bool",[]);Type.App ("bool",[])])]),"hol.and"));
-  ("Data.Bool.\\/",(Type.App ("->",[Type.App ("bool",[]);Type.App ("->",[Type.App ("bool",[]);Type.App ("bool",[])])]),"hol.or"));
-  ("Data.Bool.==>",(Type.App ("->",[Type.App ("bool",[]);Type.App ("->",[Type.App ("bool",[]);Type.App ("bool",[])])]),"hol.imp"));
-  ("Data.Bool.T",(Type.App ("bool",[]),"hol.true"));
-  ("Data.Bool.F",(Type.App ("bool",[]),"hol.false"));
-  ("Data.Bool.~",(Type.App ("->",[Type.App ("bool",[]);Type.App ("bool",[])]),"hol.not"));
-  ("Data.Bool.!",(Type.App ("->",[Type.App ("->",[Type.Var "A";Type.App ("bool",[])]);Type.App ("bool",[])]),"hol.forall"));
-  ("Data.Bool.?",(Type.App ("->",[Type.App ("->",[Type.Var "A";Type.App ("bool",[])]);Type.App ("bool",[])]),"hol.exists"))
+  ("Data.Bool./\\",(Type.App ("->",[Type.App ("bool",[]);Type.App ("->",[Type.App ("bool",[]);Type.App ("bool",[])])]),"hol.and_c"));
+  ("Data.Bool.\\/",(Type.App ("->",[Type.App ("bool",[]);Type.App ("->",[Type.App ("bool",[]);Type.App ("bool",[])])]),"hol.or_c"));
+  ("Data.Bool.==>",(Type.App ("->",[Type.App ("bool",[]);Type.App ("->",[Type.App ("bool",[]);Type.App ("bool",[])])]),"hol.imp_c"));
+  ("Data.Bool.T",(Type.App ("bool",[]),"hol.true_c"));
+  ("Data.Bool.F",(Type.App ("bool",[]),"hol.false_c"));
+  ("Data.Bool.~",(Type.App ("->",[Type.App ("bool",[]);Type.App ("bool",[])]),"hol.not_c"));
+  ("Data.Bool.!",(Type.App ("->",[Type.App ("->",[Type.Var "A";Type.App ("bool",[])]);Type.App ("bool",[])]),"hol.forall_c"));
+  ("Data.Bool.?",(Type.App ("->",[Type.App ("->",[Type.Var "A";Type.App ("bool",[])]);Type.App ("bool",[])]),"hol.exists_c"))
   ]
 
 let interpretation = ref base_interpretation

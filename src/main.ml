@@ -50,8 +50,8 @@ let () =
   let () = Term.in_type_op := [] in
   let () = List.iter remove_file (!Article.articles) in
   let modules = List.map (fun x -> Name.escape (Output.low_dash (Filename.chop_extension (Filename.basename x)))) !Article.articles  in
-  let () = (Database.fill_dep modules) in
+  let () = (Sort.fill_dep modules) in
   let () = List.iter process (!Article.articles) in
-  let () = Printf.printf "\n\nTopological order (%n):\n" (Database.number_dep()) in
-  let () = Database.ordereddep (fun file -> Printf.printf " %s.dk " file) Database.dep in
+  let () = Printf.printf "\n\nTopological order (%n):\n" (Sort.number_dep()) in
+  let () = Sort.ordereddep (fun file -> Printf.printf " %s.dk " file) Sort.dep in
   Printf.printf "\n"
