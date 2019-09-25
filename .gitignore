@@ -8,3 +8,9 @@ coq
 !dedukti/hol.dk
 !twelf/hol.elf
 !coq/hol.v
+
+*.cmi
+*.cmo
+*.o
+*.cmx
+*.depends
