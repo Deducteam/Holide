@@ -1,0 +1,181 @@
+
+(; --------------------------------- ;)
+(; Defining the type of propositions ;)
+(; --------------------------------- ;)
+
+o : Type.
+def oc : Type.
+def oi : Type.
+[] oc --> o.
+[] oi --> o.
+def eps : o -> Type.
+
+(; -------------------------- ;)
+(; Defining the type of terms ;)
+(; -------------------------- ;)
+
+type : Type.
+arr : type -> type -> type.
+
+bool : type.
+ind : type.
+
+def term : type -> Type.
+[a,b] term (arr a b) --> term a -> term b.
+[] term bool --> oc.
+
+(; --------- ;)
+(; HOL terms ;)
+(; --------- ;)
+
+eq : a : type -> term (arr a (arr a bool)).
+select : a : type -> term (arr (arr a bool) a).
+witness : a : type -> term a.
+cond : a : type -> term (arr bool (arr a (arr a a))).
+
+(; --------------------------------------- ;)
+(; Defining the intuitionistic connectives ;)
+(; --------------------------------------- ;)
+
+
+imp : o -> o -> oi.
+and : o -> o -> oi.
+true : oi.
+false : oi.
+def not : o -> oi := x : o => imp x false .
+or : o -> o -> oi.
+forall : (s : type) -> ( (term s) -> o ) -> oi.
+exists : (s : type) -> ( (term s) -> o ) -> oi.
+
+true_i : eps (true).
+and_i : (a : o) -> (b : o) -> (eps a) -> (eps b) -> eps (and a b).
+or_il : (a : o) -> (b : o) -> (eps a) -> eps (or a b).
+or_ir : (a : o) -> (b : o) -> (eps b) -> eps (or a b).
+imp_i : (a : o) -> (b : o) -> (eps a -> eps b) -> eps (imp a b).
+exists_i : (s : type) -> (t : term s) -> (y : (term s -> o)) -> (eps (y t)) -> eps (exists s y).
+forall_i : (s : type) -> (y : (term s -> o)) -> (t : term s -> eps (y t)) -> eps (forall s y).
+
+false_e : (a : o) -> (eps false) -> eps a.
+and_el : (a : o) -> (b : o) -> eps (and a b) -> eps a.
+and_er : (a : o) -> (b : o) -> eps (and a b) -> eps b.
+imp_e : (a : o) -> (b : o) -> eps (imp a b) -> eps a -> eps b.
+or_e : (a : o) -> (b : o) -> (c : o) -> eps (or a b) -> (eps a -> eps c) -> (eps b -> eps c) -> eps c.
+fa_e : (s : type) -> (t : term s) -> (y : (term s -> o)) -> eps (forall s y) -> eps (y t).
+ex_e : (s : type) -> (a : o) -> (y : (term s -> o)) -> eps (exists s y) ->
+((t : term s) -> eps (y t) -> eps a) -> eps a.
+
+def not_i : (a : o) -> (eps a -> eps false) -> eps (not a) :=
+a => eafalse => imp_i a false eafalse.
+
+def not_e : (a : o) -> (b : o) -> eps a -> eps (not a) -> eps b :=
+a => b => ea => ena => false_e b (imp_e a false ena ea).
+
+(; ---------------------------------- ;)
+(; Defining the classical connectives ;)
+(; ---------------------------------- ;)
+
+true_c : oc.
+false_c : oc.
+imp_c : o -> o -> oc.
+and_c : o -> o -> oc.
+or_c : o -> o -> oc.
+forall_c : (s : type) -> (term s -> o) -> oc.
+exists_c : (s : type) -> (term s -> o) -> oc.
+
+def not_c : o -> o := x => imp_c x false_c.
+
+true_c_i : eps (true_c).
+and_c_i : (a : o) -> (b : o) -> (eps a) -> (eps b) -> eps (and_c a b).
+or_c_il : (a : o) -> (b : o) -> (eps a) -> eps (or_c a b).
+or_c_ir : (a : o) -> (b : o) -> (eps b) -> eps (or_c a b).
+imp_c_i : (a : o) -> (b : o) -> (eps a -> eps b) -> eps (imp_c a b).
+exists_c_i : (s : type) -> (t : term s) -> (y : (term s -> o)) -> (eps (y t)) -> eps (exists_c s y).
+forall_c_i : (s : type) -> (y : (term s -> o)) -> (t : term s -> eps (y t)) -> eps (forall_c s y).
+
+false_c_e : (a : oc) -> (eps false_c) -> eps a.
+and_c_el : (a : oc) -> (b : o) -> eps (and_c a b) -> eps a.
+and_c_er : (a : o) -> (b : oc) -> eps (and_c a b) -> eps b.
+imp_c_e : (a : o) -> (b : oc) -> eps (imp_c a b) -> eps a -> eps b.
+or_c_e : (a : o) -> (b : o) -> (c : oc) -> eps (or_c a b) -> (eps a -> eps c) -> (eps b -> eps c) -> eps c.
+fa_c_e : (s : type) -> (t : term s) -> (y : (term s -> o)) -> eps (forall_c s y) -> eps (y t).
+ex_c_e : (s : type) -> (a : o) -> (y : (term s -> o)) -> eps (exists_c s y) -> ((t : term s) -> eps (y t) -> eps a) -> eps a.
+
+def not_c_i : (a : o) -> (eps a -> eps false_c) -> eps (not_c a) :=
+a => eafalse => imp_c_i a false_c eafalse.
+
+def not_c_e : (a : o) -> (b : oc) -> eps a -> eps (not_c a) -> eps b :=
+a => b => ea => ena => false_c_e b (imp_c_e a false_c ena ea).
+
+(; Excluded middle ;)
+
+em : eps(forall_c bool (x=>(or_c x (not_c x)))).
+
+(;------------;)
+(; HOL Proofs ;)
+(;------------;)
+
+def proof := eps.
+
+REFL : a : type -> t : term a ->
+  proof (eq a t t).
+ABS_THM : a : type -> b : type -> f : (term a -> term b) -> g : (term a -> term b) ->
+  (x : term a -> proof (eq b (f x) (g x))) ->
+  proof (eq (arr a b) f g).
+APP_THM : a : type -> b : type -> f : term (arr a b) -> g : term (arr a b) -> x : term a -> y : term a ->
+  proof (eq (arr a b) f g) ->
+  proof (eq a x y) ->
+  proof (eq b (f x) (g y)).
+PROP_EXT : p : term bool -> q : term bool ->
+  (proof q -> proof p) ->
+  (proof p -> proof q) ->
+  proof (eq bool p q).
+EQ_MP : p : term bool -> q : term bool ->
+  proof (eq bool p q) ->
+  proof p ->
+  proof q.
+def BETA_CONV : a : type -> b : type -> f : (term a -> term b) -> u : term a ->
+  proof (eq b (f u) (f u)) :=
+    a : type => b : type => f : (term a -> term b) => u : term a =>
+    REFL b (f u).
+
+def SYM (a : type) (t : term a) (u : term a) (H : proof (eq a t u)) : proof (eq a u t)
+:=
+  EQ_MP
+    (eq a t t)
+    (eq a u t)
+    (APP_THM
+      a
+      bool
+      (eq a t)
+      (eq a u)
+      t
+        t
+        (APP_THM
+          a
+          (arr a bool)
+          (eq a)
+          (eq a)
+          t
+            u
+            (REFL (arr a (arr a bool)) (eq a))
+            H)
+        (REFL a t))
+    (REFL a t).
+
+def TRANS (a : type) (t : term a) (u : term a) (v : term a) (H1 : proof (eq a t u)) (H2 : proof (eq a u v)) : proof (eq a t v)
+:=
+  EQ_MP
+    (eq a u v)
+    (eq a t v)
+    (APP_THM
+      a
+      bool
+      (eq a u)
+      (eq a t)
+      v
+        v
+        (APP_THM a (arr a bool) (eq a) (eq a) u t (REFL (arr a (arr a bool)) (eq a)) (SYM a t u H1))
+        (REFL a v))
+    H2.
+
+def PROVE_HYP (x : term bool) (y : term bool) (H1 : proof x) (H2 : proof x -> proof y) : proof y := H2 H1.
