@@ -5,10 +5,10 @@ module TermSet =
 struct
 
   include Set.Make(Term)
-  
+
   let map f gamma =
     fold (fun p gamma -> add (f p) gamma) gamma empty
-  
+
   let of_list gamma =
     List.fold_left (fun gamma p -> add p gamma) empty gamma
 
@@ -22,6 +22,8 @@ let rec search_name id = function
 	| []			-> failwith "Name not declared\n"
 	| (id',name)::q	-> if id=id' then name else search_name id q
 
+let nb_subst_bool = ref 0
+let var_subst_bool = ref []
 
 (** Axioms consist of a set of hypotheses and a conclusion. *)
 type axm = TermSet.t * Term.term
@@ -128,12 +130,12 @@ let translate_hyp context p =
   in Name.id "hyp" (List.length context - (index 0 context))
 
 (** Translate a HOL proposition as a Dedukti type. *)
-let translate_prop term_context p =
-  Dedukti.app (Dedukti.var (Name.hol "proof")) (Term.translate_term term_context p)
+(*let translate_prop term_context p =
+  Dedukti.app (Dedukti.var (Name.hol "proof")) (Term.translate_term term_context p [])*)
 
 (** Translate a HOL proposition as a Dedukti type with a subs. *)
-let translate_prop_ws term_context p theta =
-  Dedukti.app (Dedukti.var (Name.hol "proof")) (Term.translate_term_ws term_context p theta)
+let translate_prop term_context p theta =
+  Dedukti.app (Dedukti.var (Name.hol "proof")) (Term.translate_term term_context p theta)
 
 (** Translate a HOL proposition as a Dedukti type, without using the sharing. *)
 let translate_prop_total term_context p =
@@ -144,7 +146,7 @@ let translate_prop_total term_context p =
     the context *)
 let rec translate_hyps term_context context hyps =
   let context = List.rev_append hyps context in
-  let hyps' = List.map (fun p -> (translate_hyp context p, translate_prop term_context p)) hyps in
+  let hyps' = List.map (fun p -> (translate_hyp context p, translate_prop term_context [] p)) hyps in
   (hyps', context)
 
 (** Translate the list of hypotheses [p1; ...; pn]
@@ -163,7 +165,7 @@ let rec translate_thm term_context context ((gamma, p, proof) as thm) theta =
     let fv = free_vars thm in
     let id' = Dedukti.var (search_name id (!thm_names)) in
     let ftv' = List.map (fun x -> if List.mem x theta then Dedukti.var "hol.bool" else Dedukti.var (Type.translate_var x)) ftv in
-    let fv' = List.map (fun x -> Term.translate_var_term_ws term_context x theta) fv in
+    let fv' = List.map (fun x -> Term.translate_var_term term_context x theta) fv in
     let gammas' = List.map (fun p -> Dedukti.var (translate_hyp context p)) (TermSet.elements gamma) in
     Dedukti.apps (Dedukti.apps (Dedukti.apps id' ftv') fv') gammas'
   with Not_found ->
@@ -173,7 +175,7 @@ let rec translate_thm term_context context ((gamma, p, proof) as thm) theta =
     let fv = free_vars thm in
     let id' = Dedukti.var (translate_id id) in
     let ftv' = List.map (fun x -> if List.mem x theta then Dedukti.var "hol.bool" else Dedukti.var (Type.translate_var x)) ftv in
-    let fv' = List.map (fun x -> Term.translate_var_term_ws term_context x theta) fv in
+    let fv' = List.map (fun x -> Term.translate_var_term term_context x theta) fv in
     let gammas' = List.map (fun p -> Dedukti.var (translate_hyp context p)) (TermSet.elements gamma) in
     Dedukti.apps (Dedukti.apps (Dedukti.apps id' ftv') fv') gammas'
   with Not_found ->
@@ -184,20 +186,20 @@ let rec translate_thm term_context context ((gamma, p, proof) as thm) theta =
     | Refl(t) ->
       let a = Term.type_of t in
       let refl' = Dedukti.var (Name.hol "REFL") in
-      let a' = Type.translate_type a in
-      let t' = Term.translate_term term_context t in
+      let a' = Type.translate_type [] a in
+      let t' = Term.translate_term term_context [] t in
       Dedukti.apps refl' [a'; t']
 
     | AbsThm((x, a), ((_, tu, _) as thm_tu)) ->
       let t, u = Term.get_eq tu in
       let b = Term.type_of t in
       let abs_thm' = Dedukti.var (Name.hol "ABS_THM") in
-      let a' = Type.translate_type a in
-      let b' = Type.translate_type b in
+      let a' = Type.translate_type [] a in
+      let b' = Type.translate_type [] b in
       let x' = Term.translate_var ((x, a) :: term_context) (x, a) in
-      let t' = Dedukti.lam (x', Term.translate_type a) (Term.translate_term ((x, a) :: term_context) t) in
-      let u' = Dedukti.lam (x', Term.translate_type a) (Term.translate_term ((x, a) :: term_context) u) in
-      let thm_tu' = Dedukti.lam (x', Term.translate_type a) (translate_thm ((x, a) :: term_context) context thm_tu theta) in
+      let t' = Dedukti.lam (x', Term.translate_type [] a) (Term.translate_term ((x, a) :: term_context) [] t) in
+      let u' = Dedukti.lam (x', Term.translate_type [] a) (Term.translate_term ((x, a) :: term_context) [] u) in
+      let thm_tu' = Dedukti.lam (x', Term.translate_type [] a) (translate_thm ((x, a) :: term_context) context thm_tu theta) in
       Dedukti.apps abs_thm' [a'; b'; t'; u'; thm_tu']
 
     | AppThm(((_, fg, _) as thm_fg), ((_, tu, _) as thm_tu)) ->
@@ -205,34 +207,37 @@ let rec translate_thm term_context context ((gamma, p, proof) as thm) theta =
       let t, u = Term.get_eq tu in
       let a, b = Type.get_arr (Term.type_of f) in
       let app_thm' = Dedukti.var (Name.hol "APP_THM") in
-      let a' = Type.translate_type a in
-      let b' = Type.translate_type b in
-      let f' = Term.translate_term term_context f in
-      let g' = Term.translate_term term_context g in
-      let t' = Term.translate_term term_context t in
-      let u' = Term.translate_term term_context u in
+      let app_pred = Dedukti.var (Name.hol "APP_PRED") in
+      let a' = Type.translate_type [] a in
+      let b' = Type.translate_type [] b in
+      let f' = Term.translate_term term_context [] f in
+      let g' = Term.translate_term term_context [] g in
+      let t' = Term.translate_term term_context [] t in
+      let u' = Term.translate_term term_context [] u in
       let thm_fg' = translate_thm term_context context thm_fg theta in
       let thm_tu' = translate_thm term_context context thm_tu theta in
-      Dedukti.apps app_thm' [a'; b'; f'; g'; t'; u'; thm_fg'; thm_tu']
+      if (b = Term.tybool || Type.is_var b)
+      then Dedukti.apps app_pred [a'; b'; f'; g'; t'; u'; thm_fg'; thm_tu']
+      else Dedukti.apps app_thm' [a'; b'; f'; g'; t'; u'; thm_fg'; thm_tu'] 
 
     | Assume(p) ->
       Dedukti.var (translate_hyp context p)
 
     | DeductAntiSym(((_, p, _) as thm_p), ((_, q, _) as thm_q)) ->
       let prop_ext' = Dedukti.var (Name.hol "PROP_EXT") in
-      let p' = Term.translate_term term_context p in
-      let q' = Term.translate_term term_context q in
+      let p' = Term.translate_term term_context [] p in
+      let q' = Term.translate_term term_context [] q in
       let hp' = translate_hyp (p :: context) p in
       let hq' = translate_hyp (q :: context) q in
-      let thm_p' = Dedukti.lam (hq', translate_prop term_context q) (translate_thm term_context (q :: context) thm_p theta) in
-      let thm_q' = Dedukti.lam (hp', translate_prop term_context p) (translate_thm term_context (p :: context) thm_q theta) in
+      let thm_p' = Dedukti.lam (hq', translate_prop term_context [] q) (translate_thm term_context (q :: context) thm_p theta) in
+      let thm_q' = Dedukti.lam (hp', translate_prop term_context [] p) (translate_thm term_context (p :: context) thm_q theta) in
       Dedukti.apps prop_ext' [p'; q'; thm_p'; thm_q']
 
     | EqMp(((_, pq, _) as thm_pq), ((_, p, _) as thm_p)) ->
       let _, q = Term.get_eq pq in
       let eq_mp' = Dedukti.var (Name.hol "EQ_MP") in
-      let p' = Term.translate_term_ws term_context p theta in
-      let q' = Term.translate_term_ws term_context q theta in
+      let p' = Term.translate_term term_context theta p in
+      let q' = Term.translate_term term_context theta q in
       let thm_p' = translate_thm term_context context thm_p theta in
       let thm_pq' = translate_thm term_context context thm_pq theta in
       Dedukti.apps eq_mp' [p'; q'; thm_pq'; thm_p']
@@ -241,25 +246,25 @@ let rec translate_thm term_context context ((gamma, p, proof) as thm) theta =
       let t1, t2 = Term.get_eq t1t2 in
       let t2',t3 = Term.get_eq t2t3 in
       let a = Term.type_of t1 in
-      let a' = Type.translate_type a in
+      let a' = Type.translate_type [] a in
       if Term.compare t2 t2' <> 0 then failwith "failed at Trans" else
       let trans' = Dedukti.var (Name.hol "TRANS") in
-      let t1' = Term.translate_term term_context t1 in
-      let t2' = Term.translate_term term_context t2 in
-      let t3' = Term.translate_term term_context t3 in
+      let t1' = Term.translate_term term_context [] t1 in
+      let t2' = Term.translate_term term_context [] t2 in
+      let t3' = Term.translate_term term_context [] t3 in
       let thm1' = translate_thm term_context context thm1 theta in
       let thm2' = translate_thm term_context context thm2 theta in
       Dedukti.apps trans' [a'; t1'; t2'; t3'; thm1'; thm2']
 
     | Sym ((_, p, _) as thm_p) ->
       let l, r = Term.get_eq p in
-      let l' = Term.translate_term term_context l in
-      let r' = Term.translate_term term_context r in
+      let l' = Term.translate_term term_context [] l in
+      let r' = Term.translate_term term_context [] r in
       let a = Term.type_of l in
       let b = Term.type_of r in
       if a <> b then failwith "SYM: failed at Sym because they are not of the same type" else
       (* let a' = Term.translate_type a in _------- dobule bar *)
-      let a' = Type.translate_type a in (*this should be a Type.translate_type not Term.translate*)
+      let a' = Type.translate_type [] a in (*this should be a Type.translate_type not Term.translate*)
       let thm_p' = translate_thm term_context context thm_p theta in
       let sym' = Dedukti.var (Name.hol "SYM") in
       Dedukti.apps sym' [a'; l'; r'; thm_p']
@@ -267,10 +272,10 @@ let rec translate_thm term_context context ((gamma, p, proof) as thm) theta =
     | ProveHyp (((_, q, _) as thm_q), ((_, p, _) as thm_p)) -> (*t1= psi; t2 = phy*)
       (* let () = Printf.printf "\n\n Let me print a line to see what it is \n\n\n" in  *)
       let ph' = Dedukti.var (Name.hol "PROVE_HYP") in
-      let q' = Term.translate_term_ws term_context q theta in
-      let p' = Term.translate_term_ws term_context p theta in
+      let q' = Term.translate_term term_context theta q in
+      let p' = Term.translate_term term_context theta p in
       (* let hu' = translate_hyp (t1 :: context) t1 in  *)
-      let a' = translate_prop_ws term_context p theta in (*should be p*)
+      let a' = translate_prop term_context theta p in (*should be p*)
       let x' = translate_hyp (p :: context) p in (* x is $h_{t1}$ here*)
       let thm_p' = (translate_thm term_context context thm_p theta) in
       let thm_q' = (translate_thm term_context (p :: context) thm_q theta) in (*add the t1 back to A2*)
@@ -280,11 +285,11 @@ let rec translate_thm term_context context ((gamma, p, proof) as thm) theta =
     | BetaConv((x, a), t, u) ->
       let b = Term.type_of t in
       let beta_conv' = Dedukti.var (Name.hol "BETA_CONV") in
-      let a' = Type.translate_type a in
-      let b' = Type.translate_type b in
+      let a' = Type.translate_type [] a in
+      let b' = Type.translate_type [] b in
       let x' = Term.translate_var ((x, a) :: term_context) (x, a) in
-      let xt' = Dedukti.lam (x', Term.translate_type a) (Term.translate_term ((x, a) :: term_context) t) in
-      let u' = Term.translate_term term_context u in
+      let xt' = Dedukti.lam (x', Term.translate_type [] a) (Term.translate_term ((x, a) :: term_context) [] t) in
+      let u' = Term.translate_term term_context [] u in
       Dedukti.apps beta_conv' [a'; b'; xt'; u']
 
     | Subst(theta', sigma, ((gamma, p, _) as thm_p)) ->
@@ -298,121 +303,126 @@ let rec translate_thm term_context context ((gamma, p, proof) as thm) theta =
       (* Then apply to instantiate *)
       let type_subst a = Type.subst theta' a in
       let term_subst t = Term.subst sigma (Term.type_subst theta' t) in
-      let ftv' = List.map (fun x -> Type.translate_type (type_subst (Type.var x))) ftv in
-      let fv' = List.map (fun x -> Term.translate_term term_context (term_subst (Term.var x))) fv in
+      let ftv' = List.map (fun x -> Type.translate_type [] (type_subst (Type.var x))) ftv in
+      let fv' = List.map (fun x -> Term.translate_term term_context [] (term_subst (Term.var x))) fv in
       let gamma' = List.map (fun p -> Dedukti.var (translate_hyp context p)) (List.map term_subst (TermSet.elements gamma)) in
+      nb_subst_bool :=
+        List.fold_left
+          (fun n -> fun (x,y) -> if y = Term.tybool
+            then (var_subst_bool := x::!var_subst_bool; n+1)
+            else n)
+          (!nb_subst_bool) theta';
       Dedukti.apps (Dedukti.apps (Dedukti.apps thm' ftv') fv') gamma'
-    
+
     | Truth -> Dedukti.var (Name.hol "true_c_i")
-	
-	| Mp (((_,p1,_) as th1),((_,p2,_) as th2)) ->
+
+	  | Mp (((_,p1,_) as th1),((_,p2,_) as th2)) ->
       let t1, t2 = Term.get_bin_op "Data.Bool.==>" p1 in
       if Term.compare t1 p2 <> 0 then failwith "failed at MP" else
       let mp' = Dedukti.var (Name.hol "imp_c_e") in
-      let t1' = Term.translate_term_ws term_context t1 theta in
-      let t2' = Term.translate_term_ws term_context t2 theta in
+      let t1' = Term.translate_term term_context theta t1 in
+      let t2' = Term.translate_term term_context theta t2 in
       let th1' = translate_thm term_context context th1 theta in
       let th2' = translate_thm term_context context th2 theta in
       Dedukti.apps mp' [t1'; t2'; th1'; th2']
-		
+
 	| Disch ((_,p,_) as th,tm) ->
       let disch' = Dedukti.var (Name.hol "imp_c_i") in
-      let p' = Term.translate_term term_context p in
-      let tm' = Term.translate_term term_context tm in
+      let p' = Term.translate_term term_context [] p in
+      let tm' = Term.translate_term term_context [] tm in
       let htm' = translate_hyp (tm :: context) tm in
-      let th' = Dedukti.lam (htm', translate_prop term_context tm) (translate_thm term_context (tm :: context) th theta) in
+      let th' = Dedukti.lam (htm', translate_prop term_context [] tm) (translate_thm term_context (tm :: context) th theta) in
       Dedukti.apps disch' [tm'; p'; th']
-		
+
 	| Conj ( ((_,t1,_) as th1) , ((_,t2,_) as th2) ) -> 
       let conj' = Dedukti.var (Name.hol "and_c_i") in
-      let t1' = Term.translate_term term_context t1 in
-      let t2' = Term.translate_term term_context t2 in
+      let t1' = Term.translate_term term_context [] t1 in
+      let t2' = Term.translate_term term_context [] t2 in
       let th1' = translate_thm term_context context th1 theta in
       let th2' = translate_thm term_context context th2 theta in
       Dedukti.apps conj' [t1'; t2'; th1'; th2']
-		
-	| Conjunct1 ((_,t,_) as th) ->
+
+ | Conjunct1 ((_,t,_) as th) ->
       let t1, t2 = Term.get_bin_op "Data.Bool./\\" t in
       let conj1' = Dedukti.var (Name.hol "and_c_el") in
-      let t1' = Term.translate_term_ws term_context t1 theta in
-      let t2' = Term.translate_term_ws term_context t2 theta in
+      let t1' = Term.translate_term term_context theta t1 in
+      let t2' = Term.translate_term term_context theta t2 in
       let th' = translate_thm term_context context th theta in
       Dedukti.apps conj1' [t1'; t2'; th']
 
 	| Conjunct2 ((_,t,_) as th)  ->
       let t1, t2 = Term.get_bin_op "Data.Bool./\\" t in
       let conj2' = Dedukti.var (Name.hol "and_c_er") in
-      let t1' = Term.translate_term_ws term_context t1 theta in
-      let t2' = Term.translate_term_ws term_context t2 theta in
+      let t1' = Term.translate_term term_context theta t1 in
+      let t2' = Term.translate_term term_context theta t2 in
       let th' = translate_thm term_context context th theta in
       Dedukti.apps conj2' [t1'; t2'; th']
-      
+
 	| Contr (th,tm) ->
 	  let contr' = Dedukti.var (Name.hol "false_c_e") in
-      let tm' = Term.translate_term term_context tm in
+      let tm' = Term.translate_term term_context [] tm in
       let th' = translate_thm term_context context th theta in
       Dedukti.apps contr' [tm' ; th']
-    
+
 	| Disj1 (((_,a,_) as th),b) ->
 	  let disj1' = Dedukti.var (Name.hol "or_c_il") in
       let th' = translate_thm term_context context th theta in
-      let b' = Term.translate_term term_context b in
-      let a' = Term.translate_term term_context a in
+      let b' = Term.translate_term term_context [] b in
+      let a' = Term.translate_term term_context [] a in
 	  Dedukti.apps disj1' [a' ; b' ; th']
-	  
+
 	| Disj2 (((_,b,_) as th),a) ->
 	  let disj2' = Dedukti.var (Name.hol "or_c_ir") in
       let th' = translate_thm term_context context th theta in
-      let b' = Term.translate_term term_context b in
-      let a' = Term.translate_term term_context a in
+      let b' = Term.translate_term term_context [] b in
+      let a' = Term.translate_term term_context [] a in
 	  Dedukti.apps disj2' [a' ; b' ; th']
-	  
+
 	| Disjcases (((_,ab,_) as th),((_,c1,_) as th1) , ((_,c2,_) as th2) ) ->
       if Term.compare c1 c2 <> 0 then failwith "failed at DISJCASES" else
 	  let disjcases' = Dedukti.var (Name.hol "or_c_e") in
 	  let a, b = Term.get_bin_op "Data.Bool.\\/" ab in
-      let a' = Term.translate_term term_context a in
-      let b' = Term.translate_term term_context b in
-      let c' = Term.translate_term term_context c1 in
+      let a' = Term.translate_term term_context [] a in
+      let b' = Term.translate_term term_context [] b in
+      let c' = Term.translate_term term_context [] c1 in
       let th' = translate_thm term_context context th theta in
       let ha' = translate_hyp (a :: context) a in
-      let th1' = Dedukti.lam (ha', translate_prop term_context a) (translate_thm term_context (a :: context) th1 theta) in
+      let th1' = Dedukti.lam (ha', translate_prop term_context [] a) (translate_thm term_context (a :: context) th1 theta) in
       let hb' = translate_hyp (b :: context) b in
-      let th2' = Dedukti.lam (hb', translate_prop term_context b) (translate_thm term_context (b :: context) th2 theta) in
+      let th2' = Dedukti.lam (hb', translate_prop term_context [] b) (translate_thm term_context (b :: context) th2 theta) in
 	  Dedukti.apps disjcases' [a' ; b' ; c' ; th' ; th1' ; th2']
-	  
+
 	| Gen (((_,t,_) as th),x) ->
 	  begin
 	  match x with
 	  Term.Var (xn,xty) ->
 		  let gen' = Dedukti.var (Name.hol "forall_c_i") in
-		  let xty' = Term.translate_type xty in
-		  let xty'' = Type.translate_type xty in
+		  let xty' = Term.translate_type [] xty in
+		  let xty'' = Type.translate_type [] xty in
 		  let x' = Term.translate_var ((xn, xty) :: term_context) (xn, xty) in
-		  let t' = Dedukti.lam (x', xty') (Term.translate_term ((xn, xty) :: term_context) t) in
+		  let t' = Dedukti.lam (x', xty') (Term.translate_term ((xn, xty) :: term_context) [] t) in
 		  let th' = Dedukti.lam (x', xty') (translate_thm ((xn, xty) :: term_context) context th theta) in
 		  Dedukti.apps gen' [xty'' ; t' ; th']
 	  | _ -> failwith "Cannot generalize without a variable"
 	  end
-		
 
 	| Spec (s,((_,t,_) as th)) ->
 	  let spec' = Dedukti.var (Name.hol "fa_c_e") in
 	  let p = Term.get_un_op "Data.Bool.!" t in
 	  let a,_ = Type.get_arr (Term.type_of p) in
-	  let a' = Type.translate_type_ws theta a in
-      let s' = Term.translate_term_ws term_context s theta in
-      let p' = Term.translate_term_ws term_context p theta in
+	  let a' = Type.translate_type theta a in
+      let s' = Term.translate_term term_context theta s in
+      let p' = Term.translate_term term_context theta p in
       let th' = translate_thm term_context context th theta in
 	  Dedukti.apps spec' [a' ; s' ; p' ; th']
-	  
+
 	| Exists (etm,s,((_,t,_) as th)) ->
 	  let exists' = Dedukti.var (Name.hol "exists_c_i") in
 	  let p = Term.get_un_op "Data.Bool.?" etm in
 	  let a,_ = Type.get_arr (Term.type_of p) in
-	  let a' = Type.translate_type a in
-      let s' = Term.translate_term term_context s in
-      let p' = Term.translate_term term_context p in
+	  let a' = Type.translate_type [] a in
+      let s' = Term.translate_term term_context [] s in
+      let p' = Term.translate_term term_context [] p in
       let th' = translate_thm term_context context th theta in
 	  Dedukti.apps exists' [a' ; s' ; p' ; th']
 
@@ -426,15 +436,15 @@ let rec translate_thm term_context context ((gamma, p, proof) as thm) theta =
 	  let p = Term.get_un_op "Data.Bool.?" t1 in
 	  let (xp,a),bodp = Term.get_lam p in
 	  let pat = Term.subst [((xp,a),v)] bodp in
-	  let a' = Term.translate_type a in
-	  let a'' = Type.translate_type a in
-      let t2' = Term.translate_term term_context t2 in
-      let p' = Term.translate_term term_context p in
-      let th1' = translate_thm term_context context th1 theta in      
+	  let a' = Term.translate_type [] a in
+	  let a'' = Type.translate_type [] a in
+      let t2' = Term.translate_term term_context [] t2 in
+      let p' = Term.translate_term term_context [] p in
+      let th1' = translate_thm term_context context th1 theta in
       let hp' = translate_hyp (pat :: context) pat in
-	  let xp' = Term.translate_var ((xp, a) :: term_context) (xp, a) in
+	  (*let xp' = Term.translate_var ((xp, a) :: term_context) (xp, a) in*)
 	  let v' = Term.translate_var (vv :: term_context) vv in
-      let th2' = Dedukti.lam (v',a') (Dedukti.lam (hp', translate_prop (vv :: term_context) pat) (translate_thm (vv :: term_context) (pat :: context) th2 theta)) in
+      let th2' = Dedukti.lam (v',a') (Dedukti.lam (hp', translate_prop (vv :: term_context) [] pat) (translate_thm (vv :: term_context) (pat :: context) th2 theta)) in
 	  Dedukti.apps choose' [a'' ; t2' ; p' ; th1' ; th2']
 	  end
 	  | _ -> failwith "CHOOSE"
@@ -480,7 +490,7 @@ let declare_namedaxiom comment (gamma, p) (name:string) =
       let ftv' = Type.translate_vars ftv in
       let fv', term_context = Term.translate_vars [] fv in
       let gamma', context = translate_hyps term_context [] (TermSet.elements gamma) in
-      let p' = Dedukti.pies ftv' (Dedukti.pies fv' (Dedukti.pies gamma' (translate_prop term_context p))) in
+      let p' = Dedukti.pies ftv' (Dedukti.pies fv' (Dedukti.pies gamma' (translate_prop term_context [] p))) in
       let id = ThmSharing.add (thm,true) in
       let () = (thm_names := (id,name)::(!thm_names)) in
       Output.print_comment comment;
@@ -507,14 +517,14 @@ let define_thm comment ?(untyped=false) ?(local=false) ((gamma, p, pi) as thm) =
 	match pi with
 	  | ProveHyp (thm1,_) | Mp (thm1,_) | EqMp (thm1,_) | Conjunct1 thm1 | Conjunct2 thm1 | Spec (_,thm1) ->
 		  let theta = cwd (free_type_vars thm) (free_type_vars thm1) in
-		  let p' = Dedukti.pies ftv' (Dedukti.pies fv' (Dedukti.pies gamma' (translate_prop term_context p))) in
+		  let p' = Dedukti.pies ftv' (Dedukti.pies fv' (Dedukti.pies gamma' (translate_prop term_context [] p))) in
 		  let thm' = Dedukti.lams ftv' (Dedukti.lams fv' (Dedukti.lams gamma' (translate_thm term_context context thm theta))) in
 		  let id = ThmSharing.add (thm,false) in
 		  let id' = translate_id id in
 		  Output.print_comment comment;
 		  Output.print_definition ~opaque:true ~untyped:untyped ~local:local id' p' thm';
 	  | _ ->
-		  let p' = Dedukti.pies ftv' (Dedukti.pies fv' (Dedukti.pies gamma' (translate_prop term_context p))) in
+		  let p' = Dedukti.pies ftv' (Dedukti.pies fv' (Dedukti.pies gamma' (translate_prop term_context [] p))) in
 		  let thm' = Dedukti.lams ftv' (Dedukti.lams fv' (Dedukti.lams gamma' (translate_thm term_context context thm []))) in
 		  let id = ThmSharing.add (thm,false) in
 		  let id' = translate_id id in
@@ -615,7 +625,7 @@ let define_const c t =
     (TermSet.empty, Term.eq (Term.cst c a) t, Refl (Term.cst c a))
 
 
-let define_const_list ((delta, psi, _) as thm1) (nv_list :  (Term.cst * Term.var) list) = (* *)
+let define_const_list (delta, psi, _) (nv_list :  (Term.cst * Term.var) list) = (* *)
   if TermSet.cardinal delta <> List.length nv_list then failwith "define_const_list: length not equal"
   else 
          (* the following declare constants *)
@@ -631,10 +641,10 @@ let define_const_list ((delta, psi, _) as thm1) (nv_list :  (Term.cst * Term.var
       let (v', t) = Term.get_eq e in 
       (*do I actually need this????
       let () = Printf.printf "defineConstList defined_here \n"  in*) 
-      let x = define_const n t in 
+      (*let x = define_const n t in *)
       Term.add_cst n (Term.type_of t)
       in 
-    List.map f (nv_list :  (Term.cst * Term.var) list); (*declare constants ??*)
+    ignore(List.map f (nv_list :  (Term.cst * Term.var) list)); (*declare constants ??*)
 
     let g  (nv :  (Term.cst * Term.var)) =
       let (n, v') = nv in 
@@ -767,7 +777,7 @@ let define_type_op op abs rep tvars (gamma, pt, _) =
 
 
 let rec sprint_thm () (gamma, p, _) =
-  (* WARNING: printing of context not yet implemented *)
+  (* TODO printing of context *)
   Printf.sprintf "|- %a" Term.sprint_term p
 
 

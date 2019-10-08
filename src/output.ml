@@ -67,6 +67,21 @@ let print_definition ?(opaque=false) ?(untyped=false) ?(local=false) x a b =
      else
        Printf.fprintf chan "\n%%abbrev\n%s : %a =\n  %a.\n" x Dedukti.print_term a Dedukti.print_term b
 
+let rec list_type_arity = function
+  | 0 -> []
+  | n -> (String.concat "" ["a";string_of_int n])::(list_type_arity (n-1))
+
+(** Print the rewriting rule [t] gilbert_t type_op t --> t. *)
+let print_rule type_op arity =
+  let chan = !Options.output_channel in
+  let list_arity = List.rev (list_type_arity arity) in
+  match !Options.language with
+  | Options.Dk -> Printf.fprintf chan
+                    "\n[%s] hol.gilbert_t (%s) t --> t.\n"
+                    (String.concat "," ("t"::list_arity))
+                    (String.concat " " (type_op::list_arity))
+  | _ -> ()
+
 (** Print the definition [x := b]. *)
 let print_dependancy x b =
   let chan = !Options.output_channel in

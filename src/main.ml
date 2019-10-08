@@ -54,4 +54,4 @@ let () =
   let () = List.iter process (!Article.articles) in
   let () = Printf.printf "\n\nTopological order (%n):\n" (Sort.number_dep()) in
   let () = Sort.ordereddep (fun file -> Printf.printf " %s.dk " file) Sort.dep in
-  Printf.printf "\n"
+  Printf.printf "\n\n\n%n\n\n\n%s\n\n\n" (!Thm.nb_subst_bool) (String.concat ";" (!Thm.var_subst_bool))

@@ -212,7 +212,7 @@ let process_file () =
     | Options.Coq ->
        Output.print_command "Require Import" ["hol"] true);
   (* Main section *)
-  require_deps (Sort.dependencies (Name.escape (Output.low_dash (Input.get_module_name ()))));
+  (*require_deps (Sort.dependencies (Name.escape (Output.low_dash (Input.get_module_name ()))));*)
   let rec process_commands stack =
     let cmd = Input.read_line () in
     let stack = process_command cmd stack in

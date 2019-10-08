@@ -13,6 +13,10 @@ type hol_type =
 
 let dummy_type = Var "dummy"
 
+let is_var = function
+  | Var _ -> true
+  | _ -> false
+
 (** Printing types *)
 
 let rec sprint_type () t =
@@ -108,7 +112,7 @@ let translate_kind arity =
   Dedukti.arrs (Array.to_list (Array.make arity k)) k
 
 (** Translate a HOL type as a Dedukti term. *)
-let rec translate_type a =
+(*let rec translate_type a =
   try
     let id = TypeSharing.find a in
     let fv = free_vars [] a in
@@ -122,10 +126,10 @@ let rec translate_type a =
     | App(op, args) ->
       let op' = Dedukti.var (translate_op op) in
       let args' = List.map translate_type args in
-      Dedukti.apps op' args'
+      Dedukti.apps op' args'*)
 
 (** Translate a HOL type as a Dedukti term with a substitution. *)
-let rec translate_type_ws theta a  =
+let rec translate_type theta a  =
   try
     let id = TypeSharing.find a in
     let fv = free_vars [] a in
@@ -139,7 +143,7 @@ let rec translate_type_ws theta a  =
       Dedukti.var (translate_var x)
     | App(op, args) ->
       let op' = Dedukti.var (translate_op op) in
-      let args' = List.map (translate_type_ws theta) args  in
+      let args' = List.map (translate_type theta) args  in
       Dedukti.apps op' args'
 
 (** Translate a HOL type as a Dedukti term, without using the sharing. *)
@@ -190,6 +194,7 @@ let define_op op arity =
     let op' = translate_op op in
     let arity' = translate_kind arity in
     Output.print_declaration op' arity';
+    Output.print_rule op' arity;
   ops := (op, arity) :: !ops
 
 (** Define the Dedukti term [id := |a|]. *)
@@ -198,7 +203,7 @@ let define_type ?(local=false) a =
       let fv = free_vars [] a in
       let fv' = translate_vars fv in
       let arity' = translate_kind (List.length fv) in
-      let a' = Dedukti.lams fv' (translate_type a) in
+      let a' = Dedukti.lams fv' (translate_type [] a) in
       let id = (TypeSharing.add a) in
       let id' = translate_type_id id in
       Output.print_definition ~untyped:true ~local:local id' arity' a');
