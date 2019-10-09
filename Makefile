@@ -15,7 +15,7 @@ LIBS        = str
 
 # Do not include slash at the end because ocamlbuild does not support it
 SOURCE_DIR  = src
-BUILD_DIR   = build
+BUILD_DIR   = _build
 
 INSTALL_DIR = /usr/local/bin
 LIBINSTALL_DIR = /usr/local/lib
@@ -71,7 +71,7 @@ default: holide $(THEORY_DKO)
 
 holide:
 	$(BUILD) main.native
-	ln -sf build/src/main.native holide
+	ln -sf _build/src/main.native holide
 
 install: holide $(THEORY_DKO)
 	install holide $(INSTALL_DIR)
