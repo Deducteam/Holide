@@ -22,9 +22,6 @@ let rec search_name id = function
 	| []			-> failwith "Name not declared\n"
 	| (id',name)::q	-> if id=id' then name else search_name id q
 
-let nb_subst_bool = ref 0
-let var_subst_bool = ref []
-
 (** Axioms consist of a set of hypotheses and a conclusion. *)
 type axm = TermSet.t * Term.term
 
@@ -306,12 +303,6 @@ let rec translate_thm term_context context ((gamma, p, proof) as thm) theta =
       let ftv' = List.map (fun x -> Type.translate_type [] (type_subst (Type.var x))) ftv in
       let fv' = List.map (fun x -> Term.translate_term term_context [] (term_subst (Term.var x))) fv in
       let gamma' = List.map (fun p -> Dedukti.var (translate_hyp context p)) (List.map term_subst (TermSet.elements gamma)) in
-      nb_subst_bool :=
-        List.fold_left
-          (fun n -> fun (x,y) -> if y = Term.tybool
-            then (var_subst_bool := x::!var_subst_bool; n+1)
-            else n)
-          (!nb_subst_bool) theta';
       Dedukti.apps (Dedukti.apps (Dedukti.apps thm' ftv') fv') gamma'
 
     | Truth -> Dedukti.var (Name.hol "true_c_i")

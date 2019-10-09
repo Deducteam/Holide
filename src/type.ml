@@ -112,21 +112,6 @@ let translate_kind arity =
   Dedukti.arrs (Array.to_list (Array.make arity k)) k
 
 (** Translate a HOL type as a Dedukti term. *)
-(*let rec translate_type a =
-  try
-    let id = TypeSharing.find a in
-    let fv = free_vars [] a in
-    let id' = Dedukti.var (translate_type_id id) in
-    let fv' = List.map Dedukti.var (List.map translate_var fv) in
-    Dedukti.apps id' fv'
-  with Not_found ->
-    match a with
-    | Var(x) ->
-      Dedukti.var (translate_var x)
-    | App(op, args) ->
-      let op' = Dedukti.var (translate_op op) in
-      let args' = List.map translate_type args in
-      Dedukti.apps op' args'*)
 
 (** Translate a HOL type as a Dedukti term with a substitution. *)
 let rec translate_type theta a  =
@@ -175,15 +160,16 @@ let import_op op =
 
 (** Declare the Dedukti term [op : |arity|]. *)
 let declare_op op arity =
-  Output.print_verbose "Warning: using undeclared type operator %s\n%!" op;
   let () = add_dep_op op in
   if (Hashtbl.mem defined_typeops op) then import_op op
   else
-  (Output.print_verbose "Declaring type operator %s\n%!" op;
+  (Output.print_verbose "Warning: using undeclared type operator %s\n%!" op;
+  Output.print_verbose "Declaring type operator %s\n%!" op;
   if !Options.language <> Options.No then
     let op' = translate_op op in
     let arity' = translate_kind arity in
-    Output.print_declaration op' arity');
+    Output.print_declaration op' arity';
+    Output.print_rule op' arity);
   ops := (op, arity) :: !ops
 
 (** Define the Dedukti term [op : |arity|]. 

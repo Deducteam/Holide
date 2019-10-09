@@ -252,6 +252,7 @@ let get_lam p =
   Lam (x,bod) -> (x,bod)
   | _ -> failwith "Not a lambda-abstraction"
 
+
 let mk_app a b t u =
   match !Options.language with
   | Options.No | Options.Dk -> Dedukti.app t u
@@ -263,40 +264,6 @@ let get_app p =
   | _ -> failwith "Not an application"
 
 (** Translate the HOL term [t] as a Dedukti term. *)
-(*let rec translate_term context t =
-  try
-    let id = TermSharing.find t in
-    let ftv = free_type_vars [] t in
-    let fv = free_vars [] t in
-    let id' = Dedukti.var (translate_id id) in
-    let ftv' = List.map (fun x -> Dedukti.var (Type.translate_var x)) ftv in
-    let fv' = List.map (translate_var_term context) fv in
-    Dedukti.apps (Dedukti.apps id' ftv') fv'
-  with Not_found ->
-    match t with
-    | Var(x) ->
-      translate_var_term context x
-    | Cst(c, a) ->
-      let b = List.assoc c !csts in
-      let ftv = Type.free_vars [] b in
-      let theta = Type.match_type [] a b in
-      let c' = Dedukti.var (translate_cst c) in
-      let theta' = List.map (fun x -> Type.translate_type (List.assoc x theta)) ftv in
-      Dedukti.apps c' theta'
-    | Lam((x, a), t) ->
-      let b = type_of t in
-      let a' = Type.translate_type a in
-      let b' = Type.translate_type b in
-      let x' = translate_var ((x, a) :: context) (x, a) in
-      let t' = translate_term ((x, a) :: context) t in
-      mk_lam a' (translate_type a) b' x' t'
-    | App(t, u) ->
-      let a, b = Type.get_arr (type_of t) in
-      let a' = Type.translate_type a in
-      let b' = Type.translate_type b in
-      let t' = translate_term context t in
-      let u' = translate_term context u in
-      mk_app a' b' t' u'*)
 
 let translate_term_bool t_o_t tr_t needs_gilbert =
   let gilbert_t = Dedukti.var (Name.hol "gilbert_t") in
@@ -407,13 +374,13 @@ let import_cst c =
 
 (** Declare the constant [c : a]. *)
 let declare_cst ?(intyop=false) c a =
-  Output.print_verbose "Warning: using constant %s, undeclared in this module\n%!" c;
   let () = if (not intyop) then add_dep_cst c in
   if ((Hashtbl.mem defined_csts c) &&
 	(snd (Hashtbl.find defined_csts c) <> Name.escape (Input.get_module_name())))
 	then import_cst c
   else
-  (Output.print_verbose "Declaring constant %s\n%!" c;
+  (Output.print_verbose "Warning: using constant %s, undeclared in this module\n%!" c;
+  Output.print_verbose "Declaring constant %s\n%!" c;
   if !Options.language <> Options.No then (
 	let ftv = Type.free_vars [] a in
 	let () = declared := (c,Name.escape (Input.get_module_name()))::!declared in
