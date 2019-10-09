@@ -1,0 +1,33 @@
+# Structure of Holide project
+
+S src
+S src/article
+S src/dedukti
+S src/main
+S src/options
+S src/sharing
+S src/term
+S src/thm
+S src/database
+S src/input
+S src/name
+S src/output
+S src/sort
+S src/test
+S src/type
+
+B _build/src
+B _build/src/article
+B _build/src/dedukti
+B _build/src/main
+B _build/src/options
+B _build/src/sharing
+B _build/src/term
+B _build/src/thm
+B _build/src/database
+B _build/src/input
+B _build/src/name
+B _build/src/output
+B _build/src/sort
+B _build/src/test
+B _build/src/type
