@@ -23,7 +23,7 @@ before_install:
   - export OPAMYES=1
   - export OPAMVERBOSE=1
   - opam init
-  - opam switch create ${OCAML_VERSION}
+  - opam switch ${OCAML_VERSION} || opam switch create ${OCAML_VERSION}
   - eval `opam config env`
   - ( opam repository list | grep deducteam > /dev/null ) || opam repository add deducteam git://scm.gforge.inria.fr/opam-deducteam/opam-deducteam.git
   - opam update
