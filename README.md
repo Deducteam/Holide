@@ -4,12 +4,10 @@ HOLIDE
 [![Build Status](https://travis-ci.org/Deducteam/Holide.svg?branch=master)](https://travis-ci.org/Deducteam/Holide)
 
 Holide is an HOL to Dedukti translator. It accepts files in the
-OpenTheory article format version 6
-(http://www.gilith.com/research/opentheory/article.html) and produces
+[OpenTheory article format version 6](http://www.gilith.com/research/opentheory/article.html) and produces
 files for the Dedukti proof checker.
 
-The source code is available online at:
-https://github.com/Deducteam/Holide
+The source code is available online at [Dedukteam/Holide](https://github.com/Deducteam/Holide) GitHub repository.
 
 You need OCaml to compile it. To compile, simply run `make` in the main
 directory.
