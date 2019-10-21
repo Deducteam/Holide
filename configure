@@ -143,7 +143,7 @@ echo -n > .config_vars &&
 
 # Core
 ## Dedukti
-find_binary_and_version "dkcheck" ".native" "DEDUKTI" "--version | cut -d ' ' -f 2" &&
+find_binary_and_version "dkcheck" ".native" "DEDUKTI" "-version | cut -d ' ' -f 2" &&
 (version_geq "${VERSIONS["DEDUKTI"]}" "2.6" ||
 version_eq "${VERSIONS["DEDUKTI"]}" "devel") &&
 print_to_file "COQC=\"$(find_optional_binary 'coqc' '')\"" &&
