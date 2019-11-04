@@ -30,12 +30,18 @@ let escape name =
     else Printf.sprintf "%a%a" escape_char name.[i] (escape (i + 1)) name in
   escape 0 () name
 
-let hol name =
+let module_name modname name =
   match !Options.language with
   | Options.No | Options.Twelf ->
      Printf.sprintf "%s" name
   | Options.Dk | Options.Coq ->
-     Printf.sprintf "hol.%s" name
+     Printf.sprintf "%s.%s" modname name
+
+let ne name = module_name "ne" name
+
+let hol name = module_name "hol" name
+
+let hole name = module_name "hole" name
 
 let id prefix id = Printf.sprintf "%s_%d" (escape prefix) id
 

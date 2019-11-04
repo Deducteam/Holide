@@ -20,11 +20,47 @@ let fail () =
   Arg.usage options usage;
   exit 1
 
-let () =
-  Arg.parse options Input.set_input usage;
-  if !Input.input_file = ""
-  then fail ();
-  if !Options.output_file = "" && !Options.language <> Options.No
-  then Options.set_output (Filename.chop_extension !Input.input_file ^ Output.extension !Options.language);
-  Article.process_file ()
+let process_names file =
+	Input.set_input file;
+	if !Input.input_file = ""
+	then fail ();
+	Printf.printf "+------------------------------------------------+\n Adding %s\ to database\n+------------------------------------------------+\n" file;
+	if (*!Options.output_file = "" &&*) !Options.language <> Options.No
+	then Options.set_output (Name.escape (Input.get_module_name()) ^ Output.extension !Options.language);
+	Article.process_names_file ()
 
+
+let process file =
+	Input.set_input file;
+	if !Input.input_file = ""
+	then fail ();
+	Printf.printf "+------------------------------------------------+\n Processing %s\n+------------------------------------------------+\n" file;
+	if (*!Options.output_file = "" &&*) !Options.language <> Options.No
+	then Options.set_output (Name.escape (Input.get_module_name()) ^ Output.extension !Options.language);
+	Article.process_file ()
+
+let remove_file file =
+	Input.set_input file;
+	let to_remove = (Name.escape (Input.get_module_name())) ^ (Output.extension !Options.language) in
+	Sys.remove to_remove
+
+let rec diff l = function
+  | [] -> l
+  | t::q -> if List.mem t l then diff l q else t::(diff l q)
+
+let () =
+  Arg.parse options process_names usage;
+  let () = Term.declared := [] in
+  let () = Term.in_type_op := [] in
+  let () = List.iter remove_file (!Article.articles) in
+  let modules = List.map (fun x -> Name.escape (Output.low_dash (Filename.chop_extension (Filename.basename x)))) !Article.articles  in
+  
+  let () = (Sort.fill_dep modules) in
+  let () = List.iter process (!Article.articles) in
+  let () = Printf.printf "\n\nTopological order (%n):\n" (Sort.number_dep()) in
+  let () = Sort.ordereddep (fun file -> Printf.printf " %s.dk " file) Sort.dep in
+  let _ = Database.marshal Type.defined_typeops "typeops.holide" in
+  let _ = Database.marshal Term.defined_csts "csts.holide" in
+  let _ = Database.marshal Thm.outputs "outputs.holide" in
+  let _ = Database.marshal (diff modules (Database.unmarshal_l "modules.holide")) "modules.holide" in
+  Printf.printf "\n\n"

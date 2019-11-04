@@ -1,11 +1,3 @@
-
-(; --------------------------------- ;)
-(; Defining the type of propositions ;)
-(; --------------------------------- ;)
-
-o : Type.
-def eps : o -> Type.
-
 (; -------------------------- ;)
 (; Defining the type of terms ;)
 (; -------------------------- ;)
@@ -18,13 +10,28 @@ ind : type.
 
 def term : type -> Type.
 [a,b] term (arr a b) --> term a -> term b.
-[] term bool --> o.
+
+(; --------------------------------- ;)
+(; Defining the type of propositions ;)
+(; --------------------------------- ;)
+
+(; Type of propositions ;)
+def o := term bool.
+
+def gilbert_t : a : type -> term a -> term a.
+def gilbert_c : o -> o.
+[] gilbert_t bool --> gilbert_c.
+[a,t] gilbert_t a (gilbert_t a t) --> gilbert_t a t.
+[t] gilbert_t ind t --> t.
+[t] gilbert_t (arr _ _) t --> t.
+
+def eps : o -> Type.
 
 (; --------- ;)
 (; HOL terms ;)
 (; --------- ;)
 
-eq : a : type -> term (arr a (arr a bool)).
+def eq : a : type -> term a -> term a -> term bool.
 select : a : type -> term (arr (arr a bool) a).
 witness : a : type -> term a.
 cond : a : type -> term (arr bool (arr a (arr a a))).
@@ -34,13 +41,13 @@ cond : a : type -> term (arr bool (arr a (arr a a))).
 (; --------------------------------------- ;)
 
 imp : o -> o -> o.
-and : o -> o -> o .
+and : o -> o -> o.
 true : o.
 false : o.
 def not : o -> o := x : o => imp x false .
-or : o -> o -> o .
-forall : (s : type) -> ( (term s) -> o ) -> o .
-exists : (s : type) -> ( (term s) -> o ) -> o .
+or : o -> o -> o.
+forall : (s : type) -> ( (term s) -> o ) -> o.
+exists : (s : type) -> ( (term s) -> o ) -> o.
 
 true_i : eps (true).
 and_i : (a : o) -> (b : o) -> (eps a) -> (eps b) -> eps (and a b).
@@ -59,11 +66,11 @@ fa_e : (s : type) -> (t : term s) -> (y : (term s -> o)) -> eps (forall s y) -> 
 ex_e : (s : type) -> (a : o) -> (y : (term s -> o)) -> eps (exists s y) ->
 ((t : term s) -> eps (y t) -> eps a) -> eps a.
 
-def not_i : (a : o) -> (eps a -> eps false) -> eps (not a) :=
+(;def not_i : (a : o) -> (eps a -> eps false) -> eps (not a) :=
 a => eafalse => imp_i a false eafalse.
 
 def not_e : (a : o) -> (b : o) -> eps a -> eps (not a) -> eps b :=
-a => b => ea => ena => false_e b (imp_e a false ena ea).
+a => b => ea => ena => false_e b (imp_e a false ena ea).;)
 
 (; ---------------------------------- ;)
 (; Defining the classical connectives ;)
@@ -77,7 +84,7 @@ or_c : o -> o -> o.
 forall_c : (s : type) -> (term s -> o) -> o.
 exists_c : (s : type) -> (term s -> o) -> o.
 
-def not_c : o -> o := x => imp_c x false_c.
+def not_c : o -> o := x => imp_c (gilbert_c x) false_c.
 
 true_c_i : eps (true_c).
 and_c_i : (a : o) -> (b : o) -> (eps a) -> (eps b) -> eps (and_c a b).
@@ -87,7 +94,7 @@ imp_c_i : (a : o) -> (b : o) -> (eps a -> eps b) -> eps (imp_c a b).
 exists_c_i : (s : type) -> (t : term s) -> (y : (term s -> o)) -> (eps (y t)) -> eps (exists_c s y).
 forall_c_i : (s : type) -> (y : (term s -> o)) -> (t : term s -> eps (y t)) -> eps (forall_c s y).
 
-false_c_e : (a : o) -> (eps false_c) -> eps a.
+false_c_e : (a : o ) -> (eps false_c) -> eps a.
 and_c_el : (a : o) -> (b : o) -> eps (and_c a b) -> eps a.
 and_c_er : (a : o) -> (b : o) -> eps (and_c a b) -> eps b.
 imp_c_e : (a : o) -> (b : o) -> eps (imp_c a b) -> eps a -> eps b.
@@ -95,15 +102,37 @@ or_c_e : (a : o) -> (b : o) -> (c : o) -> eps (or_c a b) -> (eps a -> eps c) -> 
 fa_c_e : (s : type) -> (t : term s) -> (y : (term s -> o)) -> eps (forall_c s y) -> eps (y t).
 ex_c_e : (s : type) -> (a : o) -> (y : (term s -> o)) -> eps (exists_c s y) -> ((t : term s) -> eps (y t) -> eps a) -> eps a.
 
-def not_c_i : (a : o) -> (eps a -> eps false_c) -> eps (not_c a) :=
+(;def not_c_i : (a : o) -> (eps a -> eps false_c) -> eps (not_c a) :=
 a => eafalse => imp_c_i a false_c eafalse.
 
 def not_c_e : (a : o) -> (b : o) -> eps a -> eps (not_c a) -> eps b :=
-a => b => ea => ena => false_c_e b (imp_c_e a false_c ena ea).
+a => b => ea => ena => false_c_e b (imp_c_e a false_c ena ea).;)
 
 (; Excluded middle ;)
 
-em : x : o -> eps (or_c x (not_c x)).
+em : eps(forall_c bool (x=>(or_c (gilbert_c x) (not_c (gilbert_c x))))).
+
+(; Rules on classical gilbert connective ;)
+
+[A,B] hol.gilbert_c (hol.and_c A B) --> hol.and_c A B.
+
+[A,B] hol.gilbert_c (hol.or_c A B) --> hol.or_c A B.
+
+[A,B] hol.gilbert_c (hol.imp_c A B) --> hol.imp_c A B.
+
+[A] hol.gilbert_c (hol.not_c A) --> hol.not_c A.
+
+[A,B] hol.gilbert_c (hol.forall_c A B) --> hol.forall_c A B.
+
+[A,B] hol.gilbert_c (hol.exists_c A B) --> hol.exists_c A B.
+
+[A] hol.gilbert_c (hol.gilbert_c A) --> hol.gilbert_c A.
+
+[] hol.gilbert_c true_c --> true_c.
+
+[] hol.gilbert_c false_c --> false_c.
+
+[A,B] hol.gilbert_c (hol.eq hol.bool (gilbert_c A) (gilbert_c B)) --> hol.gilbert_c (hol.eq hol.bool A B).
 
 (;------------;)
 (; HOL Proofs ;)
@@ -112,65 +141,79 @@ em : x : o -> eps (or_c x (not_c x)).
 def proof := eps.
 
 REFL : a : type -> t : term a ->
-  proof (eq a t t).
+ proof (gilbert_c (eq a t t)).
+
 ABS_THM : a : type -> b : type -> f : (term a -> term b) -> g : (term a -> term b) ->
-  (x : term a -> proof (eq b (f x) (g x))) ->
-  proof (eq (arr a b) f g).
+ (x : term a -> proof (gilbert_c (eq b (f x) (g x)))) ->
+ proof (gilbert_c (eq (arr a b) f g)).
+
+APP_PRED : a : type -> b : type -> f : term (arr a b) -> g : term (arr a b) -> x : term a -> y : term a ->
+ proof (gilbert_c (eq (arr a b) f g)) ->
+ proof (gilbert_c (eq a x y)) ->
+ proof (gilbert_c (eq b (gilbert_t b (f x)) (gilbert_t b (g y)))).
+
 APP_THM : a : type -> b : type -> f : term (arr a b) -> g : term (arr a b) -> x : term a -> y : term a ->
-  proof (eq (arr a b) f g) ->
-  proof (eq a x y) ->
-  proof (eq b (f x) (g y)).
+ proof (gilbert_c (eq (arr a b) f g)) ->
+ proof (gilbert_c (eq a x y)) ->
+ proof (gilbert_c (eq b (f x) (g y))).
+
 PROP_EXT : p : term bool -> q : term bool ->
-  (proof q -> proof p) ->
-  (proof p -> proof q) ->
-  proof (eq bool p q).
+ (proof q -> proof p) ->
+ (proof p -> proof q) ->
+ proof (gilbert_c (eq bool p q)).
+
 EQ_MP : p : term bool -> q : term bool ->
-  proof (eq bool p q) ->
-  proof p ->
-  proof q.
+ proof (gilbert_c (eq bool p q)) ->
+ proof p ->
+ proof q.
+
 def BETA_CONV : a : type -> b : type -> f : (term a -> term b) -> u : term a ->
-  proof (eq b (f u) (f u)) :=
-    a : type => b : type => f : (term a -> term b) => u : term a =>
-    REFL b (f u).
+ proof (gilbert_c (eq b (f u) (f u))) :=
+   a : type => b : type => f : (term a -> term b) => u : term a =>
+   REFL b (f u).
 
-def SYM (a : type) (t : term a) (u : term a) (H : proof (eq a t u)) : proof (eq a u t)
+def SYM (a : type) (t : term a) (u : term a) (H : proof (gilbert_c (eq a t u))) : proof (gilbert_c (eq a u t))
 :=
-  EQ_MP
-    (eq a t t)
-    (eq a u t)
-    (APP_THM
-      a
-      bool
-      (eq a t)
-      (eq a u)
-      t
-        t
-        (APP_THM
-          a
-          (arr a bool)
-          (eq a)
-          (eq a)
-          t
-            u
-            (REFL (arr a (arr a bool)) (eq a))
-            H)
-        (REFL a t))
-    (REFL a t).
+ EQ_MP
+   (gilbert_c (eq a t t))
+   (gilbert_c (eq a u t))
+   (APP_PRED
+     a
+     bool
+     (eq a t)
+     (eq a u)
+     t
+       t
+       (APP_THM
+         a
+         (arr a bool)
+         (eq a)
+         (eq a)
+         t
+           u
+           (REFL (arr a (arr a bool)) (eq a))
+           H)
+       (REFL a t))
+   (REFL a t).
 
-def TRANS (a : type) (t : term a) (u : term a) (v : term a) (H1 : proof (eq a t u)) (H2 : proof (eq a u v)) : proof (eq a t v)
+def TRANS (a : type) (t : term a) (u : term a) (v : term a) (H1 : proof (gilbert_c (eq a t u))) (H2 : proof (gilbert_c (eq a u v))) : proof (gilbert_c (eq a t v))
 :=
-  EQ_MP
-    (eq a u v)
-    (eq a t v)
-    (APP_THM
-      a
-      bool
-      (eq a u)
-      (eq a t)
-      v
-        v
-        (APP_THM a (arr a bool) (eq a) (eq a) u t (REFL (arr a (arr a bool)) (eq a)) (SYM a t u H1))
-        (REFL a v))
-    H2.
+ EQ_MP
+   (gilbert_c (eq a u v))
+   (gilbert_c (eq a t v))
+   (APP_PRED
+     a
+     bool
+     (eq a u)
+     (eq a t)
+     v
+       v
+       (APP_THM a (arr a bool) (eq a) (eq a) u t (REFL (arr a (arr a bool)) (eq a)) (SYM a t u H1))
+       (REFL a v))
+   H2.
 
 def PROVE_HYP (x : term bool) (y : term bool) (H1 : proof x) (H2 : proof x -> proof y) : proof y := H2 H1.
+
+A : term bool.
+#CHECK (eq bool A A) == (gilbert_c (eq bool A A)).
+#CHECK (gilbert_t bool A) == gilbert_c A.

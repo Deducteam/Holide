@@ -1,5 +1,5 @@
 holide
-build
+_build
 opentheory
 dedukti
 twelf
@@ -8,3 +8,9 @@ coq
 !dedukti/hol.dk
 !twelf/hol.elf
 !coq/hol.v
+
+*.cmi
+*.cmo
+*.o
+*.cmx
+*.depends
