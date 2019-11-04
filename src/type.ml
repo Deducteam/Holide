@@ -46,7 +46,7 @@ let is_declared op = List.mem_assoc op !ops
 
 (** Keep track of constants' definition *)
 
-let defined_typeops = Hashtbl.create 100
+let defined_typeops = Database.unmarshal_h "typeops.holide"
 
 let deps = Hashtbl.create 4000
 
@@ -94,17 +94,17 @@ let translate_var x = Name.escape x
 
 let translate_op op =
   match op with
-  | "bool" -> Name.hol "bool"
-  | "ind" -> Name.hol "ind"
-  | "->" -> Name.hol "arr"
+  | "bool" -> Name.hole "bool"
+  | "ind" -> Name.hole "ind"
+  | "->" -> Name.hole "arr"
   | _ -> Name.escape op
 
 let translate_htype () =
   match !Options.language with
   | Options.No
   | Options.Dk
-  | Options.Coq -> Dedukti.var (Name.hol "type")
-  | Options.Twelf -> Dedukti.var (Name.hol "htype")
+  | Options.Coq -> Dedukti.var (Name.hole "type")
+  | Options.Twelf -> Dedukti.var (Name.hole "htype")
 
 (** Translate a HOL kind as a Dedukti type. *)
 let translate_kind arity =
@@ -119,12 +119,12 @@ let rec translate_type theta a  =
     let id = TypeSharing.find a in
     let fv = free_vars [] a in
     let id' = Dedukti.var (translate_type_id id) in
-    let fv' = List.map Dedukti.var (List.map (fun x -> if List.mem x theta then "hol.bool" else translate_var x) fv) in
+    let fv' = List.map Dedukti.var (List.map (fun x -> if List.mem x theta then Name.hole "bool" else translate_var x) fv) in
     Dedukti.apps id' fv'
   with Not_found ->
     match a with
     | Var(x) ->
-	  if List.mem x theta then Dedukti.var "hol.bool" else
+	  if List.mem x theta then Dedukti.var (Name.hole "bool") else
       Dedukti.var (translate_var x)
     | App(op, args) ->
       let op' = Dedukti.var (translate_op op) in
@@ -168,8 +168,7 @@ let declare_op op arity =
   if !Options.language <> Options.No then
     let op' = translate_op op in
     let arity' = translate_kind arity in
-    Output.print_declaration op' arity';
-    Output.print_rule op' arity);
+    Output.print_declaration op' arity');
   ops := (op, arity) :: !ops
 
 (** Define the Dedukti term [op : |arity|]. 
@@ -180,7 +179,6 @@ let define_op op arity =
     let op' = translate_op op in
     let arity' = translate_kind arity in
     Output.print_declaration op' arity';
-    Output.print_rule op' arity;
   ops := (op, arity) :: !ops
 
 (** Define the Dedukti term [id := |a|]. *)

@@ -6,8 +6,6 @@ let declared = ref []
 
 let in_type_op = ref ([] : string list)
 
-let abs_types = ref [Type.Var "A"; Type.Var "B"; Type.Var "C"; Type.Var "Z"; Type.Var "?3016"; Type.Var "?3004"; Type.Var "?70628"; Type.Var "?78447"; Type.Var "?79010"; Type.Var "?78902"; Type.Var "?78957"; Type.Var "?842"; Type.Var "?3612"; Type.Var "?120469"; Type.Var "?117113"]
-
 (** Term variables are annotated by their type, as different variables can have
     the same name but different type. *)
 type var = string * Type.hol_type
@@ -125,14 +123,14 @@ let alpha_equiv t u =
 
 (** Interpretation of special constants **)
 let base_interpretation = [
-  ("Data.Bool./\\",(Type.App ("->",[Type.App ("bool",[]);Type.App ("->",[Type.App ("bool",[]);Type.App ("bool",[])])]),"hol.and_c"));
-  ("Data.Bool.\\/",(Type.App ("->",[Type.App ("bool",[]);Type.App ("->",[Type.App ("bool",[]);Type.App ("bool",[])])]),"hol.or_c"));
-  ("Data.Bool.==>",(Type.App ("->",[Type.App ("bool",[]);Type.App ("->",[Type.App ("bool",[]);Type.App ("bool",[])])]),"hol.imp_c"));
-  ("Data.Bool.T",(Type.App ("bool",[]),"hol.true_c"));
-  ("Data.Bool.F",(Type.App ("bool",[]),"hol.false_c"));
-  ("Data.Bool.~",(Type.App ("->",[Type.App ("bool",[]);Type.App ("bool",[])]),"hol.not_c"));
-  ("Data.Bool.!",(Type.App ("->",[Type.App ("->",[Type.Var "A";Type.App ("bool",[])]);Type.App ("bool",[])]),"hol.forall_c"));
-  ("Data.Bool.?",(Type.App ("->",[Type.App ("->",[Type.Var "A";Type.App ("bool",[])]);Type.App ("bool",[])]),"hol.exists_c"))
+  ("Data.Bool./\\",(Type.App ("->",[Type.App ("bool",[]);Type.App ("->",[Type.App ("bool",[]);Type.App ("bool",[])])]),Name.hole "and_cp"));
+  ("Data.Bool.\\/",(Type.App ("->",[Type.App ("bool",[]);Type.App ("->",[Type.App ("bool",[]);Type.App ("bool",[])])]),Name.hole "or_cp"));
+  ("Data.Bool.==>",(Type.App ("->",[Type.App ("bool",[]);Type.App ("->",[Type.App ("bool",[]);Type.App ("bool",[])])]),Name.hole "imp_cp"));
+  ("Data.Bool.T",(Type.App ("bool",[]),Name.hole "true_cp"));
+  ("Data.Bool.F",(Type.App ("bool",[]),Name.hole "false_cp"));
+  ("Data.Bool.~",(Type.App ("->",[Type.App ("bool",[]);Type.App ("bool",[])]),Name.hole "not_cp"));
+  ("Data.Bool.!",(Type.App ("->",[Type.App ("->",[Type.Var "A";Type.App ("bool",[])]);Type.App ("bool",[])]),Name.hole "forall_cp"));
+  ("Data.Bool.?",(Type.App ("->",[Type.App ("->",[Type.Var "A";Type.App ("bool",[])]);Type.App ("bool",[])]),Name.hole "exists_cp"))
   ]
 
 let interpretation = ref base_interpretation
@@ -144,7 +142,7 @@ let connectives = ref ["Data.Bool./\\";"Data.Bool.\\/";"Data.Bool.==>";"Data.Boo
 
 (** Keep track of constants' definition *)
 
-let defined_csts = Hashtbl.create 100
+let defined_csts = Database.unmarshal_h "csts.holide"
 
 let add_cst (c:cst) (a:Type.hol_type) =
 	Hashtbl.add defined_csts c (a,Name.escape (Input.get_module_name()));
@@ -191,8 +189,8 @@ let translate_var context (x, a) =
 
 let translate_cst c =
   match c with
-  | "=" -> Name.hol "eq"
-  | "select" -> Name.hol "select"
+  | "=" -> Name.hole "eq"
+  | "select" -> Name.hole "select"
   | _ ->
     begin
       try snd (List.assoc c !interpretation) with
@@ -205,11 +203,11 @@ let translate_cst c =
 
 (** Translate the HOL type [a] as a Dedukti type with substitution. *)
 let translate_type theta a =
-  Dedukti.app (Dedukti.var (Name.hol "term")) (Type.translate_type theta a)
+  Dedukti.app (Dedukti.var (Name.hole "term")) (Type.translate_type theta a)
 
 (** Translate the HOL type [a] as a Dedukti type. *)
 let translate_type_total a =
-  Dedukti.app (Dedukti.var (Name.hol "term")) (Type.translate_type_total a)
+  Dedukti.app (Dedukti.var (Name.hole "term")) (Type.translate_type_total a)
 
 (** Translate the list of term variables [x1, a1; ...; xn, an]
     into the Dedukti terms [x1 : ||a1||; ...; xn : ||an||] and add them to
@@ -239,7 +237,7 @@ let rec translate_vars_total context vars =
 let translate_var_term context (x, a) theta =
   try Dedukti.var (translate_var context (x, a))
   with UnboundVariable ->
-    Dedukti.app (Dedukti.var (Name.hol "witness")) (Type.translate_type theta a)
+    Dedukti.app (Dedukti.var (Name.hole "witness")) (Type.translate_type theta a)
 
 let mk_lam a a' b x t =
   let lam = Dedukti.lam (x, a') t in
@@ -264,7 +262,7 @@ let get_app p =
   | _ -> failwith "Not an application"
 
 (** Translate the HOL term [t] as a Dedukti term. *)
-
+(*
 let translate_term_bool t_o_t tr_t needs_gilbert =
   let gilbert_t = Dedukti.var (Name.hol "gilbert_t") in
   let gilbert = Dedukti.app gilbert_t t_o_t in
@@ -279,27 +277,27 @@ let rec term_is_con = function
 and term_is_con_rec = function
   | App (t,u) -> term_is_con_rec t
   | Cst (c,a) when List.mem c !connectives -> true
-  | _ -> false
+  | _ -> false*)
 
 (** Translate the HOL term [t] as a Dedukti term with an additional substitution. *)
 let rec translate_term context theta t =
-  let t_o_t = type_of t in
+  (*let t_o_t = type_of t in
   let t_o_t_d = Type.translate_type theta t_o_t in
   let is_bool = t_o_t = tybool in
   let is_abs_type = Type.is_var t_o_t in
-  let needs_gilbert = (is_abs_type || (is_bool && not (term_is_con t))) in
+  let needs_gilbert = (is_abs_type || (is_bool && not (term_is_con t))) in*)
   try
     let id = TermSharing.find t in
     let ftv = free_type_vars [] t in
     let fv = free_vars [] t in
     let id' = Dedukti.var (translate_id id) in
-    let ftv' = List.map (fun x -> if List.mem x theta then Dedukti.var (Name.hol "bool") else Dedukti.var (Type.translate_var x)) ftv in
+    let ftv' = List.map (fun x -> if List.mem x theta then Dedukti.var (Name.hole "bool") else Dedukti.var (Type.translate_var x)) ftv in
     let fv' = List.map (fun x -> translate_var_term context x theta) fv in
     Dedukti.apps (Dedukti.apps id' ftv') fv'
   with Not_found ->
     match t with
     | Var(x) ->
-      translate_term_bool t_o_t_d (translate_var_term context x theta) needs_gilbert
+      (*translate_term_bool t_o_t_d*) (translate_var_term context x theta) (*needs_gilbert*)
     | Cst(c, a) ->
       let b = List.assoc c !csts in
       let ftv = Type.free_vars [] b in
@@ -307,7 +305,7 @@ let rec translate_term context theta t =
       let c' = Dedukti.var (translate_cst c) in
       let theta'' = List.map (fun x -> Type.translate_type theta (List.assoc x theta')) ftv in
       let tr_t = Dedukti.apps c' theta'' in
-      translate_term_bool t_o_t_d tr_t needs_gilbert
+      (*translate_term_bool t_o_t_d*) tr_t (*needs_gilbert*)
     | Lam((x, a), t) ->
       let b = type_of t in
       let a' = Type.translate_type theta a in
@@ -315,7 +313,7 @@ let rec translate_term context theta t =
       let x' = translate_var ((x, a) :: context) (x, a) in
       let t' = translate_term ((x, a) :: context) theta t in
       let tr_t = mk_lam a' (translate_type theta a) b' x' t' in
-      translate_term_bool t_o_t_d tr_t needs_gilbert
+      (*translate_term_bool t_o_t_d*) tr_t (*needs_gilbert*)
     | App(t, u) ->
       let a, b = Type.get_arr (type_of t) in
       let a' = Type.translate_type theta a in
@@ -323,18 +321,18 @@ let rec translate_term context theta t =
       let t' = translate_term context theta t in
       let u' = translate_term context theta u in
       let tr_t = mk_app a' b' t' u' in
-      translate_term_bool t_o_t_d tr_t needs_gilbert
+      (*translate_term_bool t_o_t_d*) tr_t (*needs_gilbert*)
 
 (** Translate the HOL term [t] as a Dedukti term, without using the sharing. *)
 let rec translate_term_total context t =
-  let t_o_t = type_of t in
+  (*let t_o_t = type_of t in
   let t_o_t_d = Type.translate_type_total t_o_t in
   let is_bool = t_o_t = tybool in
   let is_abs_type = Type.is_var t_o_t in
-  let needs_gilbert = (is_abs_type || (is_bool && not (term_is_con t))) in
+  let needs_gilbert = (is_abs_type || (is_bool && not (term_is_con t))) in*)
   match t with
     | Var(x) ->
-      translate_term_bool t_o_t_d (translate_var_term context x []) needs_gilbert
+      (*translate_term_bool t_o_t_d*) (translate_var_term context x []) (*needs_gilbert*)
     | Cst(c, a) ->
       let b = List.assoc c !csts in
       let ftv = Type.free_vars [] b in
@@ -342,7 +340,7 @@ let rec translate_term_total context t =
       let c' = Dedukti.var (translate_cst c) in
       let theta' = List.map (fun x -> Type.translate_type_total (List.assoc x theta)) ftv in
       let tr_t = Dedukti.apps c' theta' in
-       translate_term_bool t_o_t_d tr_t needs_gilbert
+       (*translate_term_bool t_o_t_d*) tr_t (*needs_gilbert*)
     | Lam((x, a), t) ->
       let b = type_of t in
       let a' = Type.translate_type_total a in
@@ -350,7 +348,7 @@ let rec translate_term_total context t =
       let x' = translate_var ((x, a) :: context) (x, a) in
       let t' = translate_term_total ((x, a) :: context) t in
       let tr_t = mk_lam a' (translate_type_total a) b' x' t' in
-      translate_term_bool t_o_t_d tr_t needs_gilbert
+      (*translate_term_bool t_o_t_d*) tr_t (*needs_gilbert*)
     | App(t, u) ->
       let a, b = Type.get_arr (type_of t) in
       let a' = Type.translate_type_total a in
@@ -358,7 +356,7 @@ let rec translate_term_total context t =
       let t' = translate_term_total context t in
       let u' = translate_term_total context u in
       let tr_t = mk_app a' b' t' u' in
-      translate_term_bool t_o_t_d tr_t needs_gilbert
+      (*translate_term_bool t_o_t_d*) tr_t (*needs_gilbert*)
 
 (** Import the constant c. *)
 let import_cst c =

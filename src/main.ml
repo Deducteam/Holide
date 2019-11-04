@@ -44,14 +44,23 @@ let remove_file file =
 	let to_remove = (Name.escape (Input.get_module_name())) ^ (Output.extension !Options.language) in
 	Sys.remove to_remove
 
+let rec diff l = function
+  | [] -> l
+  | t::q -> if List.mem t l then diff l q else t::(diff l q)
+
 let () =
   Arg.parse options process_names usage;
   let () = Term.declared := [] in
   let () = Term.in_type_op := [] in
   let () = List.iter remove_file (!Article.articles) in
   let modules = List.map (fun x -> Name.escape (Output.low_dash (Filename.chop_extension (Filename.basename x)))) !Article.articles  in
+  
   let () = (Sort.fill_dep modules) in
   let () = List.iter process (!Article.articles) in
   let () = Printf.printf "\n\nTopological order (%n):\n" (Sort.number_dep()) in
   let () = Sort.ordereddep (fun file -> Printf.printf " %s.dk " file) Sort.dep in
+  let _ = Database.marshal Type.defined_typeops "typeops.holide" in
+  let _ = Database.marshal Term.defined_csts "csts.holide" in
+  let _ = Database.marshal Thm.outputs "outputs.holide" in
+  let _ = Database.marshal (diff modules (Database.unmarshal_l "modules.holide")) "modules.holide" in
   Printf.printf "\n\n"
