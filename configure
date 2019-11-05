@@ -144,13 +144,13 @@ echo -n > .config_vars &&
 # Core
 ## Dedukti
 find_binary_and_version "dkcheck" ".native" "DEDUKTI" "-version | cut -d ' ' -f 2" &&
-(version_geq "${VERSIONS["DEDUKTI"]}" "v2.5" ||
+(version_geq "${VERSIONS["DEDUKTI"]}" "2.6" ||
 version_eq "${VERSIONS["DEDUKTI"]}" "devel") &&
 print_to_file "COQC=\"$(find_optional_binary 'coqc' '')\"" &&
 print_to_file "TWELFSERVER=\"$(find_optional_binary 'twelf-server' '')\"" &&
 find_binary_and_version "ocamlbuild" "" "OCAMLBUILD" "-version" &&
 find_binary_and_version "opentheory" "" "OPENTHEORY" "-v | cut -d ' ' -f 2" &&
-version_eq "${VERSIONS["OPENTHEORY"]}" "1.3" &&
+version_eq "${VERSIONS["OPENTHEORY"]}" "1.4" &&
 print_to_stderr "" &&
 print_to_stderr "Configuration successful, please invoke make" &&
 print_to_stderr ""

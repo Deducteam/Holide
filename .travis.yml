@@ -5,6 +5,9 @@ env:
   - OCAML_VERSION=4.04.2
   - OCAML_VERSION=4.05.0
   - OCAML_VERSION=4.06.0
+  - OCAML_VERSION=4.07.1
+  - OCAML_VERSION=4.08.1
+  - OCAML_VERSION=4.09.0
 addons:
   apt:
     sources:
@@ -20,7 +23,7 @@ before_install:
   - export OPAMYES=1
   - export OPAMVERBOSE=1
   - opam init
-  - opam switch ${OCAML_VERSION}
+  - opam switch ${OCAML_VERSION} || opam switch create ${OCAML_VERSION}
   - eval `opam config env`
   - ( opam repository list | grep deducteam > /dev/null ) || opam repository add deducteam git://scm.gforge.inria.fr/opam-deducteam/opam-deducteam.git
   - opam update
